@@ -1,0 +1,314 @@
+Don Schullian                  FINPUT FOR QBASIC              d83@DASoftVSS.com              03-17-00 (16:37)       QB, QBasic, PDS        257  8520     QB_INPUT.BAS'------------------------------------------------------------------------„' fInput% function for Qbasic„'    coded by: Don Schullian  d83@DASoftVSS.com„'    public domain„'„' Welcome,„'„'   This code is offered as an (better?) alternative to INPUT$. It„' allows for cursoring around a field, deletion, insertion, overwrite,„' scrolling, and bail out without saving the/any changes.„'„'   Its use is demonstrated below using an array to allow for editing„' a screen full of data in one loop. This code could, very easily be„' placed into it's own function and called several times in a single„' program.„'„'   There are a series of CONSTant variables set that are used by the„' function. You may, of course, put their values into the function or,„' in some cases, send the values to the function to allow for more„' control by varied other functions.„'„'   This offering is just a starting point for those of you who are„' more adventurous. Over the years I've developed 10 different„' variations of this function that control and guide the users' input.„' One of them works only for numerical input and looks & feels like„' a calculator; another allows input of only specific characters;„' while others handle hexadecimal input, masked fields, multiple lines„' and other varied field types. A bit of imagination goes a LONG way!„'„'   fGetKey% is my basic keyboard input function and I never leave„' home without it. There is a full discussion on how and why on„' either of my web pages. www.basicguru.com/scullian or„' www.DASoftVSS.com along with some other goodies.„'„'   If you have any questions, give me a shout.„'„' Don„'----------------------------------------------------------------------„' fGetKey%(Datum$,Row%,Col%,VisCols%,MaxLen%,ExitKeys$)„'„' PURPOSE: Allow user input in an editable, friendly environment„'  PARAMS: Datum$     incoming the data already found in the field„'                     returning the edited data„'          Row%, Col% the left most screen position of the field„'          VisCols%   the number of visable characters on screen      „'          MaxLen%    the maximum number of characters in the field„'          ExitKeys$  the MKI$(keyvalue%) of all the keys OTHER THAN„'                       <ESC> and <ENTER> that will return from the„'                       function„'    NOTE: If VisCols% =< MaxLen% then the value will be set to match„'          that of MaxLen%„'--------------------------------------------------------------------------„DECLARE FUNCTION fGetKey% ()„DECLARE FUNCTION fInput% (Datum$, Row%, Col%, VisCols%, MaxLen%, ExitKeys$)„„CONST cEscKey% = &H1B„CONST cEnterKey% = &HD„CONST cBkSpcKey% = &H8„CONST cDelKey% = &H5300„CONST cUpKey% = &H4800„CONST cDownKey% = &H5000„CONST cInsKey% = &H5200„CONST cLeftKey% = &H4B00„CONST cRightKey% = &H4D00„CONST cF10key% = &H4400„CONST cHomeKey% = &H4700„CONST cEndKey% = &H4F00„CONST cFgrnd% = 15          ' editing foreground„CONST cBgrnd% = 1           ' editing background„CONST cMaxLen% = 80         ' maximum length used by fInput%„„TYPE InputTYPE              ' used to store a screen full of data„  Dat AS STRING * cMaxLen   ' the field of data„  Row AS INTEGER            ' screen position„  Col AS INTEGER            '„  MaxLen AS INTEGER         ' maximum data length for this field„END TYPE„'---------------------------------------------------------------„'-------------------- start of test code„'---------------------------------------------------------------„CLS„' ================================================„' ======= this demonstrates the use for one field„' ================================================„D$ = "Mary had a little lamb, its fleece was white as snow."„G% = fInput%(D$, 1, 10, 20, 70, "")„LOCATE 2, 1: PRINT D$;„' ==================================================„' ====== the following uses an array for 5 fields„' ==================================================„DIM tI(5) AS InputTYPE„„RESTORE TestData„FOR X% = 1 TO 5„  READ Prompt$„  READ tI(X%).Dat, tI(X%).Row, tI(X%).Col, tI(X%).MaxLen„  Col% = tI(X%).Col - LEN(Prompt$) - 1„  COLOR 7, 0„  LOCATE tI(X%).Row, Col%„  PRINT Prompt$;„  COLOR 15, 0„  LOCATE tI(X%).Row, tI(X%).Col„  PRINT LEFT$(tI(X%).Dat, tI(X%).MaxLen)„NEXT„„LOCATE 25, 1: PRINT "Use Arrows to move - F-10 to save & exit - <ESC> to quit";„„ExitKeys$ = MKI$(cF10key%) + MKI$(cUpKey%) + MKI$(cDownKey%)„„Fld% = 1„DO„  IF Fld% < 1 THEN„      Fld% = 5„    ELSEIF Fld% > 5 THEN„      Fld% = 1„  END IF„  G% = fInput%(tI(Fld%).Dat, tI(Fld%).Row, tI(Fld%).Col, 0, tI(Fld%).MaxLen, ExitKeys$)„  SELECT CASE G%„    CASE cF10key: EXIT DO„    CASE cEscKey: EXIT DO„    CASE cUpKey: Fld% = Fld% - 1„    CASE ELSE: Fld% = Fld% + 1„  END SELECT„LOOP„FOR X% = 1 TO 5„  LOCATE X% + 10, 1„  PRINT tI(X%).Dat„NEXT„„TestData:„  DATA "Last Name:", "Schullian", 6, 20, 17„  DATA "Frst Name:", "Don", 7, 20, 17„  DATA "Street:", "My Street 27", 8, 20, 30„  DATA "City:", "Hometown", 9, 20, 30„  DATA "Zip:", "12345-2433", 9, 56, 10„„'„FUNCTION fGetKey%„ „  DO„    G$ = INKEY$„    L% = LEN(G$)„  LOOP UNTIL L% > 0„ „  IF L% = 1 THEN„      fGetKey% = ASC(G$)„    ELSE„      fGetKey% = CVI(G$)„  END IF„„END FUNCTION„„FUNCTION fInput% (Datum$, Row%, Col%, VisLen%, MaxLen%, ExitKeys$)„„  DIM Bgrnd  AS INTEGER              ' original background color„  DIM Cpos   AS INTEGER              ' current cursor position within string„  DIM Exet   AS STRING               ' string vals of all exit keys„  DIM Fgrnd  AS INTEGER              ' original foreground color„  DIM Inzert AS INTEGER              ' insert state„  DIM KeyVal AS INTEGER              ' incoming key-press value„  DIM MaxOff AS INTEGER              ' maximum offset position„  DIM Offset AS INTEGER              ' 1st character shown in field„  DIM Temp   AS STRING * cMaxLen     ' working data string„„  Temp$ = LTRIM$(LEFT$(Datum$, MaxLen%))„  Inzert% = 31„  Exet$ = MKI$(cEscKey%) + MKI$(cEnterKey%) + ExitKeys$„  Bgrnd% = SCREEN(Row%, Col%, 1)„  Fgrnd% = (Bgrnd% AND 15)„  Bgrnd% = (Bgrnd% \ 16)„  Offset% = 1„ „  IF (VisLen% = 0) OR (VisLen% > MaxLen%) THEN VisLen% = MaxLen%„  MaxOff% = (MaxLen% - VisLen% + 1)„„  GOSUB fInputEOL„  COLOR cFgrnd%, cBgrnd%„  LOCATE , , , Inzert%, 31„ „  DO„    IF Cpos% < 1 THEN„        Cpos% = 1„      ELSEIF Cpos% > MaxLen% THEN„        Cpos% = MaxLen%„    END IF„    IF Cpos% < Offset% THEN„        Offset% = Cpos%„      ELSEIF (Cpos% - Offset% + 2) > VisLen% THEN„        Offset% = (Cpos% - VisLen% + 1)„        IF Offset% > MaxOff% THEN Offset% = MaxOff%„    END IF„    GOSUB fInputPrint„    LOCATE Row%, (Col% + Cpos% - Offset%), 1„    KeyVal% = fGetKey%„    IF (INSTR(Exet$, MKI$(KeyVal%)) AND 1) THEN EXIT DO„    SELECT CASE KeyVal%„      CASE 32 TO 255„        IF (Inzert% = 0) OR (Cpos% = MaxLen%) THEN„            MID$(Temp$, Cpos%, 1) = CHR$(KeyVal%)„          ELSE„            Temp$ = LEFT$(Temp$, Cpos% - 1) + CHR$(KeyVal%) + MID$(Temp$, Cpos%)„        END IF„        Cpos% = Cpos% + 1„      CASE cBkSpcKey%„        IF Cpos% > 1 THEN„          Cpos% = Cpos% - 1„          GOSUB fInputStrip„        END IF„      CASE cDelKey%„        GOSUB fInputStrip„      CASE cHomeKey%„        Cpos% = 1„      CASE cEndKey%„        GOSUB fInputEOL„      CASE cLeftKey%„        Cpos% = Cpos% - 1„      CASE cRightKey%„        Cpos% = Cpos% + 1„      CASE cInsKey%„        Inzert% = (Inzert% XOR 31)„        LOCATE , , , Inzert%, 31„    END SELECT„  LOOP„„  Offset% = 1„  Temp$ = LTRIM$(Temp$)„  IF KeyVal% <> cEscKey% THEN„      Datum$ = LEFT$(Temp$, MaxLen%)„      Datum$ = RTRIM$(Temp$)„    ELSE„      Temp$ = Datum$„  END IF„  COLOR Fgrnd%, Bgrnd%„  GOSUB fInputPrint„ „  fInput% = KeyVal%„  EXIT FUNCTION„  '-----------------------------------------------------------------„  '------------- local routines„  '-----------------------------------------------------------------„fInputPrint:„  LOCATE Row%, Col%, 0„  PRINT MID$(Temp$, Offset%, VisLen%);„RETURN„  '-----------------------------------------------------------------„fInputStrip:„  Temp$ = LEFT$(Temp$, Cpos% - 1) + MID$(Temp$, Cpos% + 1)„RETURN„  '-----------------------------------------------------------------„fInputEOL:„  FOR Cpos% = MaxLen% TO 1 STEP -1„    IF ASC(MID$(Temp$, Cpos%)) <> 32 THEN EXIT FOR„  NEXT„  Cpos% = Cpos% + 1„RETURN„„END FUNCTION„Jeremiah Hyde                  JOYSTICK LIBRARY               fishoffire@yahoo.com           08-30-00 (14:48)       QB, QBasic, PDS        1    12387    JOYSTICK.BAS'PPPPPP
+'PP  PP
+'PP  PP rr rrr   oooo   ggg gg rr rrr  aaaa   mm  mm    eeee   rr rrr   zzzzzz
+'PPPPP   rrr rr oo  oo gg  gg   rrr rr    aa  mmmmmmm  ee  ee   rrr rr  z  zz
+'PP      rr  rr oo  oo gg  gg   rr  rr aaaaa  mmmmmmm  eeeeee   rr  rr    zz
+'PP      rr     oo  oo  ggggg   rr    aa  aa  mm m mm  ee       rr       zz  z
+'PP     rrrr     oooo      gg  rrrr    aaaaa  mm   mm   eeee   rrrr     zzzzzz
+'                        ggggg                            (  /\__________/\  )
+'                                                          \(^ @___..___@ ^)/
+'  ###########                                              /\ (\/\/\/\/) /\
+'  # ___ ___ #   RRRRR          lll          !!   !!       /  \(/\/\/\/\)/  \ 
+'  { (0) (0) }   RR  RR          ll         !!!! !!!!     (    """"""""""    )
+'  |    P    |   RR  RR uu  uu   ll  zzzzzz !!!! !!!!     \      _____      /
+'   \ \___/ /    RRRRR  uu  uu   ll  z  zz  !!!! !!!!     (     /(   )\     )
+'    \_____/     RR RR  uu  uu   ll    zz    !!   !!      _)   (_V) (V_)   (_
+' Jeremiah "BJ"  RR  RR uu  uu   ll   zz  z              (V)(V)(V)   (V)(V)(V)
+'     Hyde       RR  RR  uuu uu llll zzzzzz  !!   !!          My dog Smokey,
+'                                                            aka Stupid Mutt
+'
+' This code released under the GNU General Public License. This means you
+' can use it, compile it, pass it around, modify it, WHATEVER! However,
+' if you do this, I will expect notification and a copy of whatever you've
+' done, unless it's a virus, or breaking into the CIA, etc.
+'                                                    Jeremiah "BJ" Hyde
+'E-Mail me at: fishoffire@yahoo.com                fishoffire Industries:
+' Visit me at: www.fishoffire.com                     Your source for
+'                                                    EVERYTHING QBasic
+'Note:
+' This code has been tested on my machines:
+'   ASUS TX97x WOA: AMD K6-266, 160MB RAM, 20.5 GB HD, 15" PnP(SVGA+) Monitor,
+'       Win98 DOSBox
+'   AT&T Globalyst 520: Intel 486 DX 66mhz, 19MB RAM, 14" SVGA Monitor,
+'       Win95 DOSBox
+'   Compaq Deskpro 4/33i: Intel 386 33mhz, 4MB RAM, 14" SVGA Monitor,
+'       MS-DOS 6.22/Win3.11
+' and has run correctly under those environments. However, no guarantee,
+' warranty, or any other declaration of safety, etc. is offered. If your
+' computer system is taken over by smurfs, or the ROM is RAMed, or
+' anything else of a detrimental nature happens to your PC as a result
+' of this code, I am *not* responsible for it. The full burden of blame
+' rests squarely on your shoulders.(Of course, if something GOOD happens to
+' your computer as a result of this code, well, obviously, I did it!)
+' -------------
+' In other words: You're on your own, pal!
+
+' This piece of code is one of the simplest joystick libraries out there.
+' Not only does it handle 4 buttons, a rudder, AND a 4-position hat-switch,
+' but it is about a bajillion times faster than QB's STRIG and STICK commands.
+' At least, on my PCs it is. Anyway, I figure its more useful as a tutorial
+' or learning code, than as a finished product to drop into your game.
+
+' BTW: If you want to use this in a commercial program email me
+' and we'll talk.
+
+' Okay, enough chatter, time to get to the CODE!!!
+
+DEFINT A-Z      ' Ahh, the holy DEFINT command!
+
+' At last! Clear, fast(?) and simple joystick routines!
+DECLARE SUB jsCalibrate ()          ' Yes, I think we know what calibrating
+                                    ' is. And yes, you DO have to call it
+                                    ' before jsGet%(). However, jsGetRaw% is
+                                    ' fine to call whenever.
+DECLARE FUNCTION jsGet% (Value%)    ' Hmm...Lemme guess what this does...Well
+                                    ' DUHH! It gets values from the joystick!
+                                    ' Value%=0 | return buttons as bitfield
+                                    '       =1 | return X-coordinate(values
+                                    '          | scaled from -100 to 100)
+                                    '       =2 | return Y-coordinate(values
+                                    '          | scaled from -100 to 100)
+                                    '       =3 | return Z-coordinate(values
+                                    '          | scaled from -100 to 100)
+                                    '       =4 | return hat-switch. 0=center,
+                                    '          | 1=up,2=right,3=down,4=left
+DECLARE FUNCTION jsGetRaw% (Value%) ' This, obviously, returns the raw data
+                                    ' straight from the joystick. Use this if
+                                    ' you don't want to calibrate, or you
+                                    ' just can't stand my coordinate scheme.
+
+' The joystick port! There should never be any reason to change this.
+' At least, I can't think of any. On a different port, all kinds of
+' NASTY things could happen(ex: low-level hard-drive formatting).
+CONST jsPort = &H201    ' This can be anything from &H200 to &H207. It doesn't
+                        ' seem to make any difference.
+
+' The value to send to the port! When you write to the joystick port,
+' the lower nybble of data from the port remain set for as many port
+' reads as the value of that particular coordinate. So, you read until
+' a bit goes dead, and the number of reads is the value of that coordinate.
+' This CONST is only here because someday, I might find a stick that
+' requires a particular value to read say, its Q-coordinate, or the other
+' 16 positions on its hat-switch.
+CONST jsInitVal = 0
+
+' These variables are used by jsGet%, to scale the values from the
+' joystick to a 100x100 playing area, and to calibrate the hat switch.
+' They are all set by jsCalibrate, and could be used in conjungtion(sp?!?!)
+' with jsGetRaw% to make your own jsGet%
+DIM SHARED jsCenterX%   ' Center X
+DIM SHARED jsCenterY%   ' Center Y
+DIM SHARED jsCenterZ%   ' Center Rudder
+
+DIM SHARED jsMaxX%      '\
+DIM SHARED jsMinX%      ' \
+DIM SHARED jsMaxY%      '  \__Limits
+DIM SHARED jsMinY%      '  /
+DIM SHARED jsMaxZ%      ' /
+DIM SHARED jsMinZ%      '/
+
+DIM SHARED jsHatUp%     '\
+DIM SHARED jsHatRight%  ' \__Hat switch positions
+DIM SHARED jsHatDown%   ' /
+DIM SHARED jsHatLeft%   '/
+
+DIM SHARED jsDeadZone%  ' How much the stick can move
+                        ' without the program noticing.
+
+' Ahh, the unholy demo. This demo should be deleted within seconds of
+' your downloading this file. It was used only for me to ensure I had
+' it all right, and displays all the current values from the joystick
+CLS
+jsCalibrate ' Calibrate the joystick. No NASTY comments about my anti-GUI.
+CLS
+DO          ' The main loop. Read the values, print 'em, then do it again.
+    LOCATE 1, 1
+    PRINT "Buttons: ";
+        tmpBtn% = jsGet%(0)
+        IF tmpBtn% AND 1 THEN PRINT "<A>  ";  ELSE PRINT " A   ";
+        IF tmpBtn% AND 2 THEN PRINT "<B>  ";  ELSE PRINT " B   ";
+        IF tmpBtn% AND 4 THEN PRINT "<C>  ";  ELSE PRINT " C   ";
+        IF tmpBtn% AND 8 THEN PRINT "<D>  ";  ELSE PRINT " D   ";
+        PRINT ""
+    PRINT "  X-Pos: "; jsGet%(1); "   "
+    PRINT "  Y-Pos: "; jsGet%(2); "   "
+    PRINT " Rudder: "; jsGet%(3); "   "
+    PRINT "  HatSw: "; jsGet%(4)
+    ' There should probably be a delay loop here, but
+    ' I never had any need for it. Also, if your computer
+    ' is slow enough, the read from the joystick will be
+    ' more than enough of a drag
+LOOP UNTIL INKEY$ = CHR$(27)
+
+SUB jsCalibrate
+jsDeadZone% = 6
+
+PRINT "Center joystick, and press <Enter>."
+GOSUB Pause
+jsCenterX% = jsGetRaw%(1)
+jsCenterY% = jsGetRaw%(2)
+jsCenterZ% = jsGetRaw%(3)
+
+PRINT "Move joystick all the way to the top-left corner, and press <Enter>"
+GOSUB Pause
+jsMinX% = jsGetRaw%(1)
+jsMinY% = jsGetRaw%(2)
+
+PRINT "Move joystick all the way to the bottom-right corner, and press <Enter>"
+GOSUB Pause
+jsMaxX% = jsGetRaw%(1)
+jsMaxY% = jsGetRaw%(2)
+
+PRINT "Does your joystick have a Z-axis(rudder)? ";
+DO: key$ = UCASE$(INKEY$): LOOP UNTIL key$ = "Y" OR key$ = "N"
+PRINT key$
+IF key$ = "Y" THEN
+    PRINT "Move the rudder all the way to the left, and press <Enter>"
+    GOSUB Pause
+    jsMinZ% = jsGetRaw%(3)
+  
+    PRINT "Move the rudder all the way to the right, and press <Enter>"
+    GOSUB Pause
+    jsMaxZ% = jsGetRaw%(3)
+END IF
+
+PRINT "Does your joystick have a hat-switch? ";
+DO: key$ = UCASE$(INKEY$): LOOP UNTIL key$ = "Y" OR key$ = "N"
+PRINT key$
+IF key$ = "Y" THEN
+    PRINT "Move the hat-switch to the top, and press <Enter>"
+    GOSUB Pause
+    jsHatUp% = jsGetRaw%(4)
+   
+    PRINT "Move the hat-switch to the right, and press <Enter>"
+    GOSUB Pause
+    jsHatRight% = jsGetRaw%(4)
+   
+    PRINT "Move the hat-switch to the bottom, and press <Enter>"
+    GOSUB Pause
+    jsHatDown% = jsGetRaw%(4)
+   
+    PRINT "Move the hat-switch to the left, and press <Enter>"
+    GOSUB Pause
+    jsHatLeft% = jsGetRaw%(4)
+END IF
+PRINT "Joystick succesfully calibrated!"
+
+EXIT SUB
+
+Pause:
+DO: LOOP UNTIL INKEY$ = ""          ' Clear keyboard
+DO: LOOP UNTIL INKEY$ = CHR$(13)    ' Wait for <Enter>
+RETURN
+
+END SUB
+
+FUNCTION jsGet% (Value%)
+' Return a current joystick value
+' Value%=
+' ------------------------------------
+' 0, return buttons as bitfield
+'       <A> = 1, <B> = 2, <C> = 4, <D> = 8
+' 1, return current X-position. X is scaled from -100 to 100,
+'   to make things easier.
+' 2, return current Y-position. Y is scaled from -100 to 100.
+' 3, return current Z-position(rudder). Z is scaled from -100 to 100.
+' 4, return current hat-switch position. Returns 0=Center, 1=Up, 2=Right,
+'   3=Down, 4=Left.
+
+SELECT CASE Value%
+    CASE 0  ' Buttons
+        jsGet% = jsGetRaw%(0)' Get buttons as bit-field. 1=A, 2=B, 4=C, 8=D
+   
+    CASE 1  ' X-Position
+        X% = jsGetRaw%(1) - jsCenterX%
+        IF X% < 0 THEN
+            X% = (X% / (jsCenterX% - jsMinX%)) * 100
+        ELSE
+            X% = (X% / (jsMaxX% - jsCenterX%)) * 100
+        END IF
+        IF ABS(X%) <= jsDeadZone% THEN X% = 0
+        jsGet% = X%
+   
+    CASE 2  ' Y-Position
+        Y% = jsGetRaw%(2) - jsCenterY%
+        IF Y% < 0 THEN
+            Y% = -(Y% / (jsCenterY% - jsMinY%)) * 100
+        ELSE
+            Y% = -(Y% / (jsMaxY% - jsCenterY%)) * 100
+        END IF
+        IF ABS(Y%) <= jsDeadZone% THEN Y% = 0
+        jsGet% = Y%
+   
+    CASE 3  ' Z-Position, rudder
+        Z% = jsGetRaw%(3) - jsCenterZ%
+        IF Z% < 0 THEN
+            Z% = (Z% / (jsCenterZ% - jsMinZ%)) * 100
+        ELSE
+            Z% = (Z% / (jsMaxZ% - jsCenterZ%)) * 100
+        END IF
+        IF ABS(Z%) <= jsDeadZone% THEN Z% = 0
+        jsGet% = Z%
+   
+    CASE 4  ' Hat-switch
+        tmpHat% = jsGetRaw%(4)
+        Hat% = 0
+       
+        ' IF tmpHat% IS WITHIN 5 OF jsHatUp% THEN Hat% = 1
+        ' IF tmpHat% IS . . .
+        IF (((tmpHat% + 5) > jsHatUp%) AND ((tmpHat% - 5) < jsHatUp%)) THEN Hat% = 1
+        IF (((tmpHat% + 5) > jsHatRight%) AND ((tmpHat% - 5) < jsHatRight%)) THEN Hat% = 2
+        IF (((tmpHat% + 5) > jsHatDown%) AND ((tmpHat% - 5) < jsHatDown%)) THEN Hat% = 3
+        IF (((tmpHat% + 5) > jsHatLeft%) AND ((tmpHat% - 5) < jsHatLeft%)) THEN Hat% = 4
+        jsGet% = Hat%
+
+    CASE ELSE
+        ERROR 5
+END SELECT
+END FUNCTION
+
+FUNCTION jsGetRaw% (Value%)
+' Returns the current position of the joystick.
+' This is RAW, straight from port &H200.
+' Coord%=0, return buttons as a bitfield
+' Coord%=1, return X-coord
+' Coord%=2, return Y-coord
+' Coord%=3, return Z-coord
+' Coord%=4, return hat-switch
+' Anything else, return -1
+SELECT CASE Value%
+    CASE 0
+        tmp% = INP(jsPort)
+        tmp% = ((NOT (tmp% \ 16)) AND 15)
+        Coord% = tmp%
+    CASE 1
+        OUT jsPort, jsInitVal
+        DO
+            tmp% = INP(jsPort)
+            IF tmp% AND 1 THEN Coord% = Coord% + 1
+        LOOP UNTIL (tmp% AND 1) = 0
+    CASE 2
+        OUT jsPort, jsInitVal
+        DO
+            tmp% = INP(jsPort)
+            IF tmp% AND 2 THEN Coord% = Coord% + 1
+        LOOP UNTIL (tmp% AND 2) = 0
+    CASE 3
+        OUT jsPort, jsInitVal
+        DO
+            tmp% = INP(jsPort)
+            IF tmp% AND 4 THEN Coord% = Coord% + 1
+        LOOP UNTIL (tmp% AND 4) = 0
+    CASE 4
+        OUT jsPort, jsInitVal
+        DO
+            tmp% = INP(jsPort)
+            IF tmp% AND 8 THEN Coord% = Coord% + 1
+        LOOP UNTIL (tmp% AND 8) = 0
+    CASE ELSE
+        Coord% = -1
+END SELECT
+jsGetRaw% = Coord%
+END FUNCTION
+
+„Joel Nothman                   KEY CHOOSER/CONFIGURATION      jnothman@crosswinds.net        11-20-00 (23:11)       QB, QBasic, PDS        195  5045     KEYBOARD.BAS„'this set of routines should allow users to choose their keys in games etc.„'it stores the names of the keys in an array it builds„'pity i didn't know the existence or use of scan codes! o well!„'it's pretty cheap and buggy.„'„' - Joel Nothman„„DECLARE FUNCTION Trim$ (t$)„DECLARE FUNCTION NotIt! (Num!)„DECLARE FUNCTION GetKey! (x!, y!)„DECLARE FUNCTION KKeyName$ (a$)„DECLARE FUNCTION KKeyNameFromNum$ (Num!)„DECLARE FUNCTION KKeyNum! (a$)„DECLARE FUNCTION KKeyPress$ (Num!)„DECLARE SUB KSetKeys (Pre$, Lets$, start!)„DECLARE SUB KSetKeys2 (Pre$, Words$(), l!, start!)„DECLARE SUB SetUpKeyArray ()„DECLARE SUB ChangeKeys ()„„CONST NumGameKeys = 5„DIM SHARED KeyNames(512) AS STRING * 15„DIM GameKeys(-1 TO NumGameKeys - 1) AS STRING„DIM GameKeyNum(-1 TO NumGameKeys - 1) AS INTEGER„„SetUpKeyArray„„CLS„PRINT "set the keys:"„GameKeys(-1) = "Quit"„GameKeyNum(-1) = 27„FOR k = 0 TO NumGameKeys - 1„     LOCATE k + 3, 1„     GameKeys(k) = "Key" + STR$(k)„     PRINT GameKeys(k)„     DO„          GameKeyNum(k) = GetKey(k + 3, 10)„          flag = 0„          FOR j = -1 TO k - 1„               IF GameKeyNum(k) = GameKeyNum(j) THEN flag = 1„          NEXT„          IF flag = 1 THEN BEEP„     LOOP UNTIL flag = 0„     PRINT KKeyNameFromNum$((GameKeyNum(k)))„NEXT„„PRINT„PRINT„PRINT "Press your keys!!! esc to quit:"„DO„     DO„          a$ = INKEY$„     LOOP UNTIL a$ <> ""„     k = KKeyNum(UCASE$(a$))„     PRINT KKeyNameFromNum(k),„     FOR j = -1 TO NumGameKeys - 1„          IF k = GameKeyNum(j) THEN PRINT GameKeys(j),„     NEXT„     PRINT„LOOP UNTIL k = GameKeyNum(-1)„„FUNCTION GetKey (x, y)„     DO„     LOOP UNTIL INKEY$ = ""„     DO„          IF TIMER - .2 > q THEN„               q = TIMER„               j = NotIt(j)„               COLOR j * 15„               LOCATE x, y„               PRINT "_"„          END IF„          a$ = INKEY$„     LOOP UNTIL a$ <> "" AND KKeyName(a$) <> ""„„     IF LEN(a$) = 1 THEN„          a$ = UCASE$(a$)„     END IF„„     GetKey = KKeyNum(a$)„„     LOCATE x, y„     PRINT " "„     LOCATE x, y„     COLOR 7„END FUNCTION„„FUNCTION KKeyName$ (a$)„     KKeyName$ = Trim$(KeyNames(KKeyNum(a$)))„END FUNCTION„„FUNCTION KKeyNameFromNum$ (Num)„     KKeyNameFromNum$ = Trim$(KeyNames(Num))„END FUNCTION„„FUNCTION KKeyNum (a$)„     IF a$ = "" THEN„          KKeyNum = 0„     ELSE„          KKeyNum = 256 * (LEN(a$) - 1) + ASC(RIGHT$(a$, 1))„     END IF„END FUNCTION„„FUNCTION KKeyPress$ (Num)„     IF Num / 256 >= 1 THEN„          a$ = CHR$(0)„     END IF„     KKeyPress$ = a$ + CHR$(Num MOD 256)„END FUNCTION„„SUB KSetKeys (Pre$, Lets$, start)„     FOR j = 1 TO LEN(Lets$)„          KeyNames(start + j - 1) = Pre$ + MID$(Lets$, j, 1)„     NEXT„END SUB„„SUB KSetKeys2 (Pre$, Words$(), l, start)„     FOR j = 0 TO l - 1„          KeyNames(start + j) = Pre$ + Words$(j)„     NEXT„END SUB„„FUNCTION NotIt (Num)„     IF Num = 0 THEN„          NotIt = 1„     ELSE„          NotIt = 0„     END IF„END FUNCTION„„SUB SetUpKeyArray„     KSetKeys "ALT + ", "1234567890-=", 256 + 120„     KSetKeys "ALT + ", "QWERTYUIOP", 256 + 16„     KSetKeys "ALT + ", "ASDFGHJKL", 256 + 30„     KSetKeys "ALT + ", "ZXCVBNM", 256 + 44„     KSetKeys "ALT + F", "123456789", 256 + 104„     KeyNames(256 + 104 + 9) = "ALT + F10"„     KeyNames(256 + 139) = "ALT + F11"„     KeyNames(256 + 140) = "ALT + F12"„     KSetKeys "F", "123456789", 256 + 59„     KeyNames(256 + 59 + 9) = "F10"„     KeyNames(256 + 133) = "F11"„     KeyNames(256 + 134) = "F12"„     KSetKeys "CTRL + F", "123456789", 256 + 94„     KeyNames(256 + 103) = "CTRL + F10"„     KeyNames(256 + 137) = "CTRL + F11"„     KeyNames(256 + 138) = "CTRL + F12"„„     DIM TempArray(12) AS STRING„     TempArray(0) = "HOME"„     TempArray(1) = "UP"„     TempArray(2) = "PAGE UP"„     TempArray(3) = ""„     TempArray(4) = "LEFT"„     TempArray(5) = "NUMPAD 5"„     TempArray(6) = "RIGHT"„     TempArray(7) = ""„     TempArray(8) = "END"„     TempArray(9) = "DOWN"„     TempArray(10) = "PAGE DOWN"„     TempArray(11) = "INSERT"„     TempArray(12) = "DELETE"„     KSetKeys2 "", TempArray(), 13, 256 + 71„„     TempArray(0) = "CTRL + LEFT"„     TempArray(1) = "CTRL + RIGHT"„     TempArray(2) = "CTRL + END"„     TempArray(3) = "CTRL + PGDN"„     TempArray(4) = "CTRL + HOME"„     KSetKeys2 "", TempArray(), 5, 256 + 115„     KeyNames(256 + 132) = "CTRL+PGUP"„„     KSetKeys "CTRL + ", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 1„     „     FOR j = 33 TO 127„          KeyNames(j) = UCASE$(CHR$(j))„     NEXT„„     KeyNames(8) = "BACK"„     KeyNames(9) = "TAB"„     KeyNames(13) = "ENTER"„     KeyNames(27) = "ESCAPE"„     KeyNames(32) = "SPACE"„END SUB„„FUNCTION Trim$ (t$)„     txt$ = LTRIM$(RTRIM$(t$))„     FOR j = 1 TO LEN(txt$)„          IF ASC(MID$(txt$, j)) > 0 THEN„               txt$ = MID$(txt$, j)„               j = LEN(txt$) + 1000„          END IF„     NEXT„     Trim$ = txt$„END FUNCTION„
