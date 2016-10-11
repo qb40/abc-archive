@@ -1,0 +1,244 @@
+Mario LaRosa                   program delaying routine       ESmemberNEMESIS@aol.com        03-16-03 (  :  )       QB, PDS                1    1243     qdelay.bas  '''
+' Qdelay v1.1, a pure QB, program delaying routine.
+'
+' Brought to you by... MARIO SOFT.
+'
+' (C)opyright 2002
+'
+' Contact me at ESmemberNEMESIS@aol.com
+' If you have any questions or comments concerning these routines.
+'
+' THIS PROGRAM MAY BE DISTRIBUTED FREELY AS PUBLIC DOMAIN SOFTWARE
+' AS LONG AS ANY PART OF THIS FILE IS NOT ALTERED IN ANY WAY.
+' IF YOU DO WISH TO USE THESE ROUTINES IN YOUR OWN PROGRAMS
+' THEN PLEASE GIVE CREDIT TO THE AUTHOR... Mario LaRosa.
+'
+'''
+'                         
+'$DYNAMIC
+'
+DEFINT A-Z
+'
+DECLARE SUB QDELAY (seconds!)
+'
+SCREEN 0
+COLOR 7
+CLS
+'
+QDELAY 0                        'Always calibrate routine first.
+'                          
+DO: LOOP UNTIL TIMER <> TIMER
+'
+DO
+ '
+ t! = TIMER
+ '
+ QDELAY 1 / 2                   'Delay approx. 1/2 seconds.
+ '
+ PRINT TIMER - t!; " seconds"
+ '
+LOOP UNTIL LEN(INKEY$)
+'
+SYSTEM
+'
+TIMERinterrupt:
+ sys& = clc&: clc& = &H7FFFFFFE
+RETURN
+'
+
+REM $STATIC
+SUB QDELAY (seconds!) STATIC
+ '
+ SHARED sys&, clc&
+ '
+ IF seconds! THEN
+  '
+  del& = sys& * seconds!
+  '
+  FOR clc& = 1 TO del&: NEXT
+  '
+ ELSE
+  '
+  ON TIMER(1) GOSUB TIMERinterrupt
+  '
+  DO: LOOP UNTIL TIMER <> TIMER
+  '
+  TIMER ON
+  '
+  FOR clc& = 1 TO &H7FFFFFFE: NEXT
+  '
+  TIMER OFF
+  '
+ END IF
+ '
+END SUB
+
+„David Williams                 Satallite Position Update      david.williams@ablelink.org    06-13-03 (  :  )       Qbasic, QB, PDS, PB    404  10275    SAT_CALC.BAS' SAT_CALC.BAS „' TV Satellites, Commodore PET version, David Williams, 1982 „  „' david.williams@ablelink.org „  „' Updated for other computers 1995, 2000, 2002 „' Solar outage code added March 2003 „  „' This version dated 2003 April 5 „  „DECLARE SUB InNum (Pt$, V, MX%) „DECLARE FUNCTION YesNo$ () „DECLARE FUNCTION ROff$ (J, P%) „DECLARE FUNCTION ATan (A, B) „DECLARE SUB Instructions () „DECLARE SUB SpaceBar () „  „DIM SHARED PI „PI = 4 * ATN(1) „CF = PI / 180  ' Degree/radian factor „CF2 = PI / 182.5 „R = 6.615  ' Radius of geosynchronous orbit in units of earth radius „  „ON ERROR GOTO Etrap „F% = FREEFILE „N$ = "TVSATDAT.DAT" „E% = 0 „OPEN N$ FOR INPUT AS F% „' Note: File does not have to exist for program to run. If no file „' is found, default values are used. File is created or updated „' at end of program. „  „IF E% THEN „  „  FA = 45   ') „  FG = 80   ') Default latitude & longitudes, used if file not found „  FS = 90   ') „  FZ = -5   ' Default time zone „  „ELSE „  „  INPUT #F%, FA, FG, FS, FZ „  „END IF „  „CLOSE F% „  „ON ERROR GOTO 0 „  „LA = FA „LG = FG „LS = FS „TZ = FZ „  „CLS „PRINT "Do you want instructions"; „IF YesNo$ = "y" THEN CALL Instructions „  „Newcalc: „  „' Input section „  „CLS „PRINT "For your current position on the ground:" „PRINT "Latitude is"; ROff$(LA, -2); "degrees north." „PRINT "Longitude is"; ROff$(LG, -2); "degrees west." „  „PRINT „PRINT "Input latitude and longitude in degrees." „PRINT "Use negative numbers for angles in" „PRINT "opposite directions to those shown." „PRINT „  „InNum "Your latitude (deg. north)", LA, 90 „InNum "Your longitude (deg. west)", LG, 180 „  „PRINT "For current satellite:" „PRINT "Longitude is"; ROff$(LS, -2); "degrees west." „PRINT „PRINT "Input longitude of satellite in" „PRINT "degrees west. (Use negative number" „PRINT "if you want to input degrees east.)" „PRINT „InNum "Satellite's longitude", LS, 180 „  „PRINT "Current time zone offset is"; „PRINT ROff$(TZ, -1); "hours from GMT / UT." „InNum "Time zone (+/- hours from GMT / UT)", TZ, 14 „  „PRINT "Confirm these entries"; „IF YesNo$ = "n" GOTO Newcalc „  „LD = (LG - LS) * CF ' longitude difference in radians „LR = CF * LA        ' latitude in radians for outages „LT = LR + PI / 2    ' latitude from s. pole „  „' satellite's x,y,z coordinates „Y = 0 ' equatorial orbit „X = R * SIN(LD) „Z = R * COS(LD) „  „' rotate system to put observer at s. pole „D = ABS(Z) ' distance from x-axis „AN = SGN(Z) * PI / 2 „' azimuth angle onto y-z plane (y-axis as zero) „AN = AN + LT ' rotate system „Y = D * COS(AN) ' new y „Z = D * SIN(AN) ' new z „  „CLS „  „IF Y > -1 THEN „  „  PRINT "Satellite is invisible (below horizon)." „  „ELSE „  „  ' calculate altitude „  „  AL = ATan(-1 - Y, SQR(X * X + Z * Z)) „  „  AL = AL / CF ' alt. in degrees „  A$ = ROff$(AL, 1) „  „  IF VAL(A$) = 90 THEN „  „     PRINT "Satellite is vertically overhead." „     PRINT "(Altitude is 90.0 degrees.)" „  „  ELSE „  „    ' calculate new bearing „  „    BE = ATan(X, Z) „  „    BE = BE / CF ' bearing in degrees „  „    ' roundoff and printout „  „    BE = VAL(ROff$(BE, 1)) „    BE = BE - 360 * INT(BE / 360) „  „    PRINT "Satellite's position:" „  „    B$ = ROff$(BE, 1) „    BE = VAL(B$) „  „    PRINT "Bearing is"; B$; "degrees. "; „  „    X = BE / 90 „    IF X = INT(X) THEN „      Y1$ = RTRIM$(MID$("NorthEast SouthWest", 5 * X + 1, 5)) „      PRINT "(Due "; Y1$; ")" „    ELSE „      Z = ABS(180 - BE) „      IF Z < 90 THEN „        Y1$ = "(South," „      ELSE „        Y1$ = "(North," „        Z = 180 - Z „      END IF „      IF X < 2 THEN „        Y2$ = "East)" „      ELSE „        Y2$ = "West)" „      END IF „      PRINT Y1$; ROff$(Z, 1); "degrees "; Y2$ „    END IF „  „    PRINT "Altitude is"; A$; "degrees." „    IF AL < 5 THEN „      PRINT „      PRINT "Very low altitude - Communication unreliable" „    END IF „  „  END IF „  „  ' Solar outage calculation „  „  ' coordinate differences „  X1 = -R * SIN(LD) „  Y1 = -SIN(LR) „  Z1 = R * COS(LD) - COS(LR) „  „  ' calculate apparent declination „  AD = ATN(Y1 / SQR(X1 * X1 + Z1 * Z1)) „  „  ' calculate apparent longitude „  AG = ATan(X1, Z1) „  „  V = 4 * (AG / CF + LG) + 60 * TZ + 720.5 „  „  PRINT „  PRINT "Nominal solar outage dates and times:" „  „  ' find dates (days after Jan 31) when sun is at same declination „  FOR J = 0 TO 1 „  „    U = 182 „    L = 364 * J „    FOR K = 1 TO 20 „      D = (U + L) / 2 „      A = CF2 * D + .033 * SIN(CF2 * (D - 12)) „      IF INT(L) = INT(U) THEN EXIT FOR „      S = -.398 * COS(A) „      S = ATN(S / SQR(1 - S * S)) „      IF S > AD THEN U = D ELSE L = D „    NEXT „    D = INT(D - 40 + TZ / 24) ' 40 days from Dec solstice to Jan 31 „  „    ' convert date to month and day „    P = 1 „    DO „      L = VAL(MID$(" 28, 31,122, 31, 30,999", P, 3)) „      IF D <= L THEN EXIT DO „      D = D - L „      P = P + 4 „    LOOP „    MN$ = MID$("Feb,Mar,Apr,Aug,Sep,Oct", P, 3) „  „    ' calculate equation of time „    ET = 9.8 * SIN(A + A) + 7.6 * SIN(A - .2) „  „    ' calculate outage time „    T = INT(V + ET) „    T = T - 1440 * INT(T / 1440) „    H = T \ 60 „    M = T MOD 60 „  „    PRINT MN$; D, H; "hrs,"; M; "mins" „  „  NEXT „  „  PRINT „  PRINT "Outages occur for a few days before and after nominal dates," „  PRINT "and for a few minutes before and after nominal times." „  „END IF „  „PRINT „  „PRINT "Another calculation"; „  „IF YesNo$ = "y" GOTO Newcalc „  „IF LA <> FA OR LG <> FG OR LS <> FS OR TZ <> FZ THEN „  PRINT "Keep current latitude, longitudes & time zone for next run"; „  IF YesNo$ = "y" THEN „    ON ERROR GOTO Etrap „    E% = 0 „    OPEN N$ FOR OUTPUT AS F% „    IF E% = 0 THEN „      PRINT #F%, ROff$(LA, -3); ","; ROff$(LG, -3); ","; „      PRINT #F%, ROff$(LS, -3); ","; ROff$(TZ, -1) „    END IF „    CLOSE F% „    ON ERROR GOTO 0 „  END IF „END IF „  „END „  „Etrap: „  E% = 1 „  RESUME NEXT „  „  „FUNCTION ATan (A, B) „  IF B = 0 THEN „    X = SGN(A) * PI / 2 „  ELSE „    X = ATN(A / B) „    IF B < 0 THEN X = X + PI „  END IF „  ATan = X „END FUNCTION „  „SUB InNum (Pt$, V, MX%) „  „ DO „  „   PRINT Pt$; " (or ENTER to keep value)? "; „   C = POS(0) „   LINE INPUT In$ „   IF In$ = "" THEN „     LOCATE CSRLIN - 1, C - 1 „     PRINT ROff$(V, -3); "(kept)" „     PRINT „     EXIT DO „   END IF „   W = VAL(In$) „   IF ABS(W) <= MX% AND INSTR(In$, ",") = 0 THEN „     V = W „     PRINT „     EXIT DO „   END IF „   BEEP „   M$ = LTRIM$(STR$(MX%)) „   PRINT "Input illegal or out of range! (-"; M$; " to "; M$; ")" „   PRINT "Try again..." „   PRINT „  „ LOOP „  „END SUB „  „SUB Instructions „  „   CLS „   PRINT "This program calculates the position in the sky, as true" „   PRINT "compass bearing and altitude (or angle of elevation), of" „   PRINT "any satellite that is in geostationary orbit. (Almost all" „   PRINT "T.V. broadcasting and relay satellites are geostationary.)" „   PRINT „   PRINT "The program also calculates the dates and times of 'solar" „   PRINT "outages' which occur when the satellite passes in front" „   PRINT "of, or very near, the sun in the sky. Radio waves from the" „   PRINT "sun then interfere with the satellite's communications." „   PRINT „   PRINT "You will be asked for your latitude and longitude, and for" „   PRINT "the longitude of the satellite. Enter these quantities, in" „   PRINT "degrees, accurate to at least one place of decimals (0.1" „   PRINT "degree) if possible. Errors greater than 0.1 degree will" „   PRINT "cause significantly inaccurate calculated results. It is" „   PRINT "a good idea to use a G.P.S. receiver to find your own" „   PRINT "latitude and longitude." „   PRINT „   PRINT "You will also be asked for your time zone, which is used" „   PRINT "in the solar outage calculation. Enter the number of hours" „   PRINT "by which it is ahead of (+) or behind (-) G.M.T. / U.T." „  „   CALL SpaceBar „  „   CLS „   PRINT "Note that the bearings are true. If you want a magnetic" „   PRINT "bearing, look up the local magnetic deviation. To find" „   PRINT "the magnetic bearing, add the deviation to the true" „   PRINT "bearing if magnetic north is west of true north. Subtract" „   PRINT "the deviation if magnetic north is east of true north." „   PRINT „   PRINT "The solar outage dates and times shown by the program" „   PRINT "are those when the satellite is closest to the centre of" „   PRINT "the sun's disk, as seen from your location on the earth." „   PRINT "Outages can occur when the satellite is a couple of degrees" „   PRINT "from the centre, depending on sunspot activity and the" „   PRINT "geometry of your dish. This means that outages can be" „   PRINT "several minutes in length, centred on the nominal time, and" „   PRINT "can occur for several successive days (at the same time of" „   PRINT "day), centred on the nominal date." „   PRINT „   PRINT "Your entries of latitude, longitudes and time zone can be" „   PRINT "kept on disk and used in subsequent runs. Initially," „   PRINT "arbitary defaults are used." „  „   CALL SpaceBar „  „END SUB „  „FUNCTION ROff$ (J, P%) „  F% = ABS(P%) „  H& = INT(10 ^ F% * J + .5) „  IF H& < 0 THEN M$ = " -" ELSE M$ = " " „  S$ = LTRIM$(STR$(ABS(H&))) „  L% = LEN(S$) „  IF L% < F% + 1 THEN „    S$ = STRING$(F% + 1 - L%, "0") + S$ „    L% = F% + 1 „  END IF „  T$ = "." + RIGHT$(S$, F%) „  IF P% <= 0 THEN „    DO WHILE RIGHT$(T$, 1) = "0" „      T$ = LEFT$(T$, LEN(T$) - 1) „    LOOP „    IF T$ = "." THEN T$ = "" „  END IF „  ROff$ = M$ + LEFT$(S$, L% - F%) + T$ + " " „END FUNCTION „  „SUB SpaceBar „  „  PRINT „  PRINT "Press Space Bar to continue"; „  „  DO WHILE LEN(INKEY$) „  LOOP „  „  DO WHILE INKEY$ <> " " „  LOOP „  „END SUB „  „FUNCTION YesNo$ „  „   PRINT "? (y/n) "; „   DO WHILE INKEY$ <> "" „   LOOP „   DO „     G$ = LCASE$(INKEY$) „   LOOP UNTIL G$ = "y" OR G$ = "n" „   PRINT G$ „   PRINT „   YesNo$ = G$ „  „END FUNCTION „David Williams                 Satallite Outages              david.williams@ablelink.org    06-13-03 (  :  )       Qbasic, QB, PDS, PB    97   2316     SAT_OUTS.BAS' SATOUTS.BAS „' David Williams, 2003 „' This version dated 2003 Apr 5 „  „' david.williams@ablelink.org„  „CLS „PRINT "Calculates dates and times when geostationary satellites" „PRINT "pass in front of sun, interfering with transmissions." „PRINT „  „R = 6.615  ' Radius of geosynchronous orbit in units of earth radius „PI = 4 * ATN(1) „CF1 = PI / 180 „CF2 = PI / 182.5 „  „PRINT "Input latitude and longitudes in degrees." „PRINT "Use negative numbers for angles in" „PRINT "opposite directions to those shown." „PRINT „  „INPUT "Your latitude (deg. north)"; LT „LT = CF1 * LT „  „INPUT "Your longitude (deg. west)"; LG „  „INPUT "Satellite's longitude (deg. west)"; LS „  „LD = (LS - LG) * CF1     ' longitude difference in radians „  „INPUT "Time zone offset (+/- hours from G.M.T. / U.T.)"; TZ „  „' coordinate differences „X = R * SIN(LD) „Y = -SIN(LT) „Z = R * COS(LD) - COS(LT) „  „' calculate apparent declination „AD = ATN(Y / SQR(X * X + Z * Z)) „  „' calculate apparent longitude „IF Z = 0 THEN „  AG = SGN(X) * PI / 2 „ELSE „  AG = ATN(X / Z) „  IF Z < 0 THEN AG = AG + PI „END IF „  „V = 4 * (AG / CF1 + LG) + 60 * TZ + 720.5 „  „PRINT „PRINT "Nominal solar outage dates and times:" „  „' find dates (days after Jan 31) when sun is at same declination „FOR J = 0 TO 1 „  „  U = 182 „  L = 364 * J „  FOR K = 1 TO 20 „    D = (U + L) / 2 „    A = CF2 * D + .033 * SIN(CF2 * (D - 12)) „    IF INT(L) = INT(U) THEN EXIT FOR „    S = -.398 * COS(A) „    S = ATN(S / SQR(1 - S * S)) „    IF S > AD THEN U = D ELSE L = D „  NEXT „  D = INT(D - 40 + TZ / 24) ' 40 days from Dec solstice to Jan 31 „  „  ' convert date to month and day „  P = 1 „  DO „    L = VAL(MID$(" 28, 31,122, 31, 30,999", P, 3)) „    IF D <= L THEN EXIT DO „    D = D - L „    P = P + 4 „  LOOP „  MN$ = MID$("Feb,Mar,Apr,Aug,Sep,Oct", P, 3) „  „  ' calculate equation of time „  ET = 9.8 * SIN(A + A) + 7.6 * SIN(A - .2) „  „  ' calculate outage time „  T = INT(V + ET) „  T = T - 1440 * INT(T / 1440) „  H = T \ 60 „  M = T MOD 60 „  „  PRINT MN$; D, H; "hrs,"; M; "mins" „  „NEXT „  „PRINT „PRINT "Outages occur for a few days before and after nominal dates," „PRINT "and for a few minutes before and after nominal times." „  „END „  „David Williams                 Month and Day Names            david.williams@ablelink.org    06-13-03 (  :  )       Qbasic, QB, PDS, PB    33   896      MNTHNAME.BAS' MNTHNAME.BAS„' David Williams, 2003„' david.williams@ablelink.org„„' Function MonthName$(N%) returns the name of the N%th month of„' the year. With minor changes, the same technique can be used for„' the names of days of the week, and so on.„„DECLARE FUNCTION MonthName$ (N%)„„DO„  INPUT "Number of month (1 - 12)"; N%„  IF N% < 1 OR N% > 12 THEN END„  Name$ = MonthName$(N%)„  PRINT "That month is "; Name$; "."„  PRINT„LOOP„„ „„FUNCTION MonthName$ (N%)„  'produces the name of the N%th month„  W$ = "January,February,March,April,May,June,July,"„  W$ = W$ + "August,September,October,November,December"„  Q% = 0„  FOR X% = 1 TO N%„    P% = Q% + 1„    Q% = INSTR(P%, W$, ",")„  NEXT„  IF Q% = 0 THEN Q% = LEN(W$) + 1„  MonthName$ = MID$(W$, P%, Q% - P%)„END FUNCTION„„Dieter Folger                  Perpetual Calendar             ba2049@bnv-bamberg.de          06-13-03 (  :  )       RAPID-Q                1    4270     Cal.bas     '---------------------------------------------
+'CALENDAR.BAS for RapidQ
+'Perpetual calendar (c) 2003 by Dieter Folger
+'From 1583 until the twelfth of never.
+'Note:
+'The Gregorian Calendar was introduced in
+'many European countries in October 1582,
+'in England not until 1752.
+'---------------------------------------------
+ $INCLUDE "rapidq.inc"
+ $TypeCheck ON
+
+ DIM Dm(12) AS INTEGER, Month(12) AS STRING
+ DIM DateLbl(37) AS qLabel
+ DIM Day AS STRING, iLeft AS INTEGER, iTop AS INTEGER
+ DIM d AS STRING, m AS BYTE, y AS INTEGER, i AS INTEGER
+ DIM cM AS INTEGER, cY AS INTEGER, cD AS INTEGER
+ DIM mo AS INTEGER, yy AS INTEGER, fd AS INTEGER, yr AS INTEGER
+ DIM Cent AS INTEGER, FirstTime AS Byte, Insert AS STRING
+
+ DECLARE SUB WriteMonth 
+ DECLARE SUB ChangeYear
+ DECLARE SUB ChangeMonth
+ DECLARE SUB Minimize
+ 
+ DATA 31, "  January ", 28, "  February ", 31, "     March "
+ DATA 30, "     April ", 31, "      May ", 30, "     June "
+ DATA 31, "      July ", 31, "   August ", 30, "September "
+ DATA 31, "  October ", 30, "November ", 31, "December "
+ FOR i = 1 TO 12 : READ Dm(i), Month(i) : NEXT
+
+ Day = "Mo Tu We Th  Fr  Sa  Su"
+ 
+ ' get current date values
+ d = Date$ : m = VAL(Left$(d, 2)) : y = VAL(MID$(d, 7, 4))
+ cD = VAL(MID$(d, 4, 2)) : cM = m : cY = y 
+ 
+CREATE DayFont AS QFont
+   Name = "Arial"
+   Size = 12
+   Color = clRed
+END CREATE
+CREATE TopFont AS QFont
+   Name = "Arial"
+   Size = 12
+   AddStyles (fsBold)
+END CREATE
+ 
+CREATE Form AS QFORM
+   Caption = LTRIM$(Month(m)) + STR$(cD) + ", "+ STR$(cY)
+   Width = 230
+   Height = 225
+   Center
+   Color = &hEEFAFA
+   delBorderIcons(biMaximize)
+   WndProc = Minimize
+   onShow = WriteMonth
+   CREATE DayLbl AS qLabel
+      Left = 25
+      Top = 50
+      Caption = Day
+      Font = DayFont
+   END CREATE
+   CREATE DateLabel AS QLabel
+      Left = 50
+      Top = 21
+      Font = TopFont
+   END CREATE
+   CREATE ScrollMonth AS QScrollBar
+      Top = 20
+      Left = 20
+      Width = 25
+      Height = 18
+      Position = m
+      Min = 0
+      Max = 13
+      Hint = "Go up or down one month"
+      ShowHint = 1
+      onChange = ChangeMonth
+   END CREATE
+   CREATE ScrollYear AS QScrollBar
+      Top = 20
+      Left = 180
+      Width = 25
+      Height = 18
+      Max = 65000
+      Min =  1583
+      Position = y
+      Hint = "Go up or down one year"
+      ShowHint = 1
+      onChange = ChangeYear
+   END CREATE    
+END CREATE
+
+Form.ShowModal
+
+SUB WriteMonth
+ Dm(2) = 28
+ IF y MOD 4 = 0 THEN Dm(2) = 29  'February has 28 days except 
+    'in leap years. Centuries are only leap years when they can 
+    'be divided by 400 (i.e. 1900 was not leap year, 2000 was one)
+ IF y MOD 100 = 0 AND y MOD 400 <> 0 then Dm(2) = 28
+    
+ mo = m : yy = y
+    'Calculate first day of current month
+    '(Monday = 0...Sunday = 6)
+    '(algorithm by Carl Friedrich Gauss 1777-1855):
+ IF mo < 3 THEN
+    INC mo, 10 : DEC yy
+ ELSE
+    DEC mo, 2
+ END IF
+ Cent = yy \ 100 : yr = yy MOD 100
+ fd = ((((26 * mo - 2) \ 10) + yr + (yr \ 4) _
+      + (Cent \ 4) - (2 * Cent)) MOD 7) 
+ IF fd < 0 THEN INC fd, 7
+ 
+ iLeft = 25 : iTop = 75
+ FOR i = 1 TO 37 
+     IF FirstTime = 0 THEN
+        'create labels only once
+        DateLbl(i).Parent = Form
+        DateLbl(i).Left = iLeft    
+        DateLbl(i).Top = iTop    
+        DateLbl(i).Width = 25    
+        DateLbl(i).Height = 20 
+     END IF
+     IF i-fd < 10 then Insert = " " ELSE INSERT = ""   
+     DateLbl(i).Caption = " "  + Insert + STR$(i - fd) + "  "
+     IF i <= fd THEN DateLbl(i).Caption = "    "
+     IF i > dm(m) + fd THEN DateLbl(i).Caption = "    " 
+     
+     IF( i - fd = cd) AND m = cm AND y = cy THEN DateLbl(i).Font.Color_
+        = clred ELSE DateLbl(i).Font.Color = clBlack
+    
+     IF FirstTime = 0 THEN
+        IF (i) MOD 7 = 0 THEN
+           iLeft = 25 : INC iTop, 20
+        ELSE 
+           INC iLeft, 25
+        END IF       
+     END IF    
+ NEXT 
+ DateLabel.Caption = Month(m) + STR$(y)
+ FirstTime = 1
+END SUB
+
+SUB ChangeMonth
+ m = ScrollMonth.Position
+ IF m = 0 THEN  
+    IF y > ScrollMonth.Min THEN
+        m = 12 : DEC y
+    ELSE
+        m = 1    
+    END IF
+    ScrollMonth.Position = m
+ END IF
+ IF m = 13 THEN 
+    m = 1 : INC y
+    ScrollMonth.Position = m
+ END IF
+ WriteMonth
+END SUB
+
+SUB ChangeYear
+ y = ScrollYear.Position
+ WriteMonth
+END SUB
+„David Williams                 Equation of Time               david.williams@ablelink.org    06-14-03 (  :  )       Qbasic, QB, PDS        215  6912     ETIMSDEC.BAS' ETIMSDEC.BAS„' David Williams, 2003„' david.williams@ablelink.org„„' This version dated 2003 June 14„„' Compares results of (home brewed) Equation of Time„' and Solar Declination calculations (performed in„' functions Equt, ETApprox and Declin) with published values.„„' Equation of Time is difference between Solar Time and Mean Time.„' Sundials show solar time. Clocks show mean time.„' Solar Declination is latitude of the sun in celestial coordinates.„„' Published values are from the book:„' Sundials, Their Theory and Construction„' by: Albert E. Waugh„' Dover Publications, New York, 1973„' ISBN 0-486-22947-5„„DECLARE FUNCTION Equt! (D!)„DECLARE FUNCTION Declin! (D!)„DECLARE FUNCTION ETApprox! (D!)„„DIM ML(1 TO 13)„FOR X = 1 TO 13„  READ ML(X)„NEXT„DATA 33,29,33,31,33,31,33,33,31,33,31,33,0„' Month lengths adjusted for numbers of pixels on screen„„ETData:„„DATA 9, 128, 375, -20, 15: ' plotting parameters for E. of T. graph„„DATA 3.12,7.38,11.08,13.33,14.19,13.49,12.34,10.18,7.28„DATA 4.08,1.16,-1,-2.51,-3.4,-3.34,-2.25,-.39,1.28„DATA 3.33,5.16,6.15,6.16,5.14,3.16,.12,-3.08,-6.4„DATA -10.05,-13.02,-15.12,-16.2,-16,-14.16,-11.11,-7.02,-2.13„' Above data show published values of Equation of Time on„' 1st, 11th and 21st days of months. Decimal point separates„' minutes, to left, from seconds, to right, e.g. 3.16 means„' 3 minutes and 16 seconds. Seconds are multiplied by 5/3 to„' get fractional minutes after READ instruction.„„DeclnData:„„DATA 5, 65, 407, -25, 25: ' plotting parameters for Decl'n graph„„DATA -23.04,-21.56,-20.05,-17.2,-14.18,-10.52,-7.49,-3.57,0„DATA 4.18,8.07,11.39,14.54,17.43,20.04,21.58,23.02,23.26„DATA 23.09,22.11,20.36,18.1,15.27,12.19,8.3,4.48,.57„DATA -2.57,-6.48,-10.29,-14.14,-17.15,-19.47,-21.43,-22.57,-23.26„' Above data show published values of solar declination on 1st,„' 11th and 21st days of month. See note after Equation of Time data.„„SCREEN 12„CL0 = 7: CL1 = 14: CL2 = 11   ' colours used„„Menu:„CLS„COLOR CL0„PRINT "1. Draw Equation of Time Graph (Fairly Accurate Function)"„PRINT "2. Draw Equation of Time Graph (Simple Approximate Function)"„PRINT "3. Draw Solar Declination Graph"„PRINT "4. Quit program"„PRINT„PRINT "Which (by number)?";„WHILE INKEY$ <> "": WEND„DO„  F% = VAL(INKEY$)„LOOP UNTIL F% >= 1 AND F% <= 4„PRINT F%„IF F% = 4 GOTO Wayout„„' Set up graph„CLS„„IF F% < 3 THEN„  PRINT TAB(30); "EQUATION OF TIME"„  LOCATE 3, 15„  PRINT "Graph shows difference in minutes between clock"„  PRINT TAB(15); "and sundial time. Positive difference means"„  PRINT TAB(15); "clock is ahead of sundial, and vice versa."„  LOCATE 26, 15„  COLOR CL1„  PRINT "Graph shows results of ";„  IF F% = 2 THEN PRINT "(approximate) ";„  PRINT "calculation."„  COLOR CL2„  PRINT TAB(15); "Circles show published values of Equation of Time."„  RESTORE ETData„ELSE„  PRINT TAB(25); "Declination of Sun, in Degrees"„  LOCATE 3, 10„  COLOR CL1„  PRINT "Graph shows calculated function. ";„  COLOR CL2„  PRINT "Circles show published values.";„  RESTORE DeclnData„END IF„„READ ML%, VT%, VB%, LL%, UL%„„COLOR CL0„LOCATE 16, 67„PRINT "-=";„„FOR T = LL% TO UL% STEP 5„  LINE (137, 247 - 6.4 * T)-(530, 247 - 6.4 * T)„  LOCATE 16 - T / 2.5, 14„  PRINT RIGHT$(" " + STR$(T), 3);„  IF T = 0 THEN PRINT " =";„NEXT„LOCATE ML%, 20„PRINT "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec";„„' Do graphing„T = 0„D = 0„MC = 0„FOR M = 0 TO 384„  M1 = 147 + M„  IF M = T THEN„    ' Draw vertical line„    COLOR CL0„    LINE (M1, VT%)-(M1, VB%)„    MC = MC + 1„    T = T + ML(MC)„    MS = 0„  ELSE„    ' Plot point(s)„    COLOR CL1„    SELECT CASE F%„      CASE 1: G = Equt(D)„      CASE 2: G = ETApprox(D)„      CASE ELSE: G = Declin(D)„    END SELECT„    PSET (M1, 247 - 6.4 * G)„    IF MS = 0 OR MS = 10 OR MS = 20 THEN„      ' Plot circle representing published value„      COLOR CL2„      READ E    ' published values„      E = FIX(E) + (E - FIX(E)) * 5 / 3„      CIRCLE (M1, 247 - 6.4 * E), 2„    END IF„    MS = MS + 1„    D = D + 1„  END IF„  IF ML(MC) = 33 AND M = T - 18 THEN M = M + 1„NEXT„„' Tidy up„COLOR CL0„LOCATE 30, 25„PRINT "*** Press any key to continue ***";„WHILE INKEY$ <> "": WEND„WHILE INKEY$ = "": WEND„GOTO Menu„„Wayout:„PRINT„PRINT„PRINT "Note: Using the fairly accurate function, the calculated and published"„PRINT "values of Equation of Time show a Root Mean Square difference of about"„PRINT "3.7 *seconds*. The greatest difference is 6.0 seconds, on July 11."„PRINT "Using the approximate function, the R.M.S. difference is about 10.5"„PRINT "seconds. The largest difference is 19.6 seconds, on March 1."„PRINT„PRINT "The approximate calculation is simpler and faster than the more"„PRINT "accurate one, and is certainly adequate for many purposes, such as"„PRINT "comparing the readings of sundials and clocks."„PRINT„PRINT "Comparison of the calculated and published values of Solar Declination"„PRINT "on same dates shows a Root Mean Square difference of 4.7 arc-minutes."„PRINT "The largest difference is 8.8 arc-minutes, on April 11."„PRINT„PRINT "In order to get even better accuracy than this declination calculation"„PRINT "and the more accurate Equation of Time one, much more elaborate"„PRINT "methods are needed."„„END„„FUNCTION Declin (D)„  ' Calculates declination of sun, in degrees, on Dth day of year.„  ' D = 0 on January 1.„  PI = 3.14159265#„  W = PI / 182.5 ' mean orbital angular speed in radians per day„  ' Solstice 10 days before New Year's Day. Perihelion 2 days after.„  A = W * (D + 10) + .0334 * SIN(W * (D - 2))  ' .0334 is twice eccentricity„  S = -.3979 * COS(A) ' .3979 is sine of axial tilt„  Declin = ATN(S / SQR(1 - S * S)) * 180 / PI ' arc-sine, in degrees„END FUNCTION„„FUNCTION Equt (D)„  ' Calculates equation of time, in minutes, on„  ' Dth day of year. (D = 0 on January 1.)„  PI = 3.14159265#„  W = PI / 182.5  ' mean orbital angular speed in radians per day„  T = D + 10 'Solstice 10 days before Jan 1. Perihelion 12 days after solstice„  A = W * T + .0334 * SIN(W * (T - 12)) ' .0334 is twice eccentricity„  B = ATN(TAN(A) / .9174) - W * T ' .9174 is cosine of axial tilt„  B = B - PI * INT(B / PI + .5) ' ATN uncertain. B must be close to zero.„  Equt = B * 720 / PI ' 720 minutes in 12 hours„END FUNCTION„„FUNCTION ETApprox (D)„  ' Calculates approximate equation of time, in minutes, on„  ' Dth day of year. (D = 0 on January 1.)„  W = 3.14159265# / 182.5  ' mean orbital angular speed in radians/day„  ' solstice 10 days before new year's day. perihelion 2 days after„  A = W * (D + 10) + .0334 * SIN(W * (D - 2)) ' .0334 is twice eccentricity„  ETApprox = 9.8 * SIN(A + A) + 7.7 * SIN(A - .21) ' approximate formula„END FUNCTION„„Achilles b. Mina               Digital/Analog Clock w/Sound   wasaywasay@edsamail.com.ph     06-15-03 (  :  )       RAPIDQ                 422  11365    Alarmed.bas 'Alarmed v1.00„'Uploaded 5/19/03„'By Achilles B. Mina„„'Alarmed is yet another alarm clock. It demonstrates Rapid-Q's talent „'for producing highly useful utilities easily and, unfortunately, also „'shows the author's lack of talent for innovative programming. „'You can do as you please with this code but kindly acknowledge „'the talentless author.„„'To run the program, provide .wav files of the stated filenames„'in you current directory„„$RESOURCE birds AS "birds.wav"„$RESOURCE parrot AS "parrot.wav"„$RESOURCE clicker AS "click.wav"„„DECLARE SUB InitAlarm„DECLARE SUB CountdownMode„DECLARE SUB Off„DECLARE SUB Click„DECLARE SUB CheckAMPM„DECLARE SUB Reminded„DECLARE SUB AlarmHow„DECLARE SUB AlarmTime„DECLARE SUB Countdown„DECLARE SUB DigitClock„DECLARE SUB AlarmPaint„DECLARE SUB Sweep„DECLARE SUB About„DECLARE SUB GetMM„DECLARE SUB PlayAlarm„DECLARE SUB Help„„DECLARE FUNCTION SetWindowLong Lib "User32" Alias "SetWindowLongA" _„(hwnd as Long, nIndex as Long, dwNewLong as Long) as Long„„DECLARE FUNCTION GetShortPathName Lib "kernel32" _„Alias "GetShortPathNameA"(ByVal lpszLongPath As String, _„ByVal lpszShortPath As long, ByVal lBuffer As Long) As Long„„DECLARE FUNCTION PlayMedia Lib "winmm.dll" _„Alias "mciSendStringA"(ByVal lpstrCommand As String, _„lpstrReturnString As Long, uReturnLength As _„Long, hwndCallback As Long) As Long„„DEFINT hour, min, sec, runcount„DEFBYTE clicked, alarmed„DEFSTR ampm$, AlarmFileName$„„DIM AlarmEdit(1 TO 3) AS QEDIT„DIM AlarmLabel(1 TO 2) AS QLABEL„DIM AMPM(1 TO 2) AS QRADIOBUTTON„DIM mAudio AS STRING*256„„CREATE Clock AS QTIMER„  Interval = 250„  Enabled = 1„  OnTimer = CountdownMode„END CREATE„„CREATE AlarmForm AS QFORM„  Height = 203„  Center„  Color = 100050001„  DelBorderIcons(2)„  OnClose = Off„  CREATE Label AS QLABEL„    Align = 1„    Alignment = 2„    LabelStyle = 2„    Font.Name = "Arial"„    Font.Size = 40„  END CREATE„  CREATE Label1 AS QLABEL„    Top = 85„    Left = 45„    Alignment = 2„    LabelStyle = 2„    Font.Name = "Arial"„    Font.Size = 15„    Caption = "Alarm at:"„    Hint = "Click to toggle countdown mode"„    ShowHint = 1„    Cursor = -21„    OnClick = AlarmHow„  END CREATE„  CREATE Remind AS QLABEL„    Top = 112„    Left = 184„    Alignment = 2„    LabelStyle = 1„    Font.Name = "Arial"„    Font.Size = 10„    Font.Color = 390909„    Caption = "Click AM or PM"„  END CREATE„  CREATE GetButt AS QCOOLBTN„    Top = 145„    Left = 35„    Width = 40„    Font.Name = "Arial"„    Font.Size = 10„    Font.Color = &HFFFFFF„    Caption = "Open"„    Flat = 1„    Cursor = -21„    Hint = "Choose another alarm sound"„    ShowHint = 1„    OnClick = GetMM„  END CREATE„  CREATE OffButt AS QCOOLBTN„    Top = 145„    Left = 81„    Width = 40„    Font.Name = "Arial"„    Font.Size = 10„    Font.Color = &HFFFFFF„    Caption = "On/Off"„    Flat = 1„    Cursor = -21„    Hint = "Alarm is enabled"„    ShowHint = 1„    OnClick = Click„  END CREATE„  CREATE AboutButt AS QCOOLBTN„    Top = 145„    Left = 127„    Width = 40„    Font.Name = "Arial"„    Font.Size = 10„    Font.Color = &HFFFFFF„    Caption = "Help"„    Flat = 1„    Cursor = -21„    Hint = "Click to know how to use Alarmed"„    ShowHint = 1„    OnClick = Help„  END CREATE„  CREATE AlarmClock AS QDXSCREEN„    Top = 53„    Left = 178„    Cursor = -21„    Hint = "About"„    Showhint = 1„    OnClick = About„  END CREATE„  CREATE AlarmHelp AS QFORM„    Height = 203„    Width = 150„    Top = (Screen.Height - AlarmHelp.Height)*.5„    Left = Screen.Width*.5 + 160„    BorderStyle = 3„    Caption = "Help"„    Visible = 0„    CREATE AlarmRich AS QRICHEDIT„      Align = 5„      ReadOnly = 1„      ScrollBars = 3„      AddStrings "Welcome!"„      AddStrings ""„      AddStrings "Alarmed is a simple hint-based alarm clock. _„                  To operate it, simply take note of the bubble hints."„      AddStrings ""„      AddStrings "To set the alarm, just type in the hour, _„                  minutes and seconds when you want it to _„                  go off. Seconds is optional."„      AddStrings ""„      AddStrings "There are two ways the alarm can go off: _„                  when the time itself is reached, or after _„                  a certain period has elapsed. Either mode can _„                  be set by clicking Alarm at:"„      AddStrings ""„      AddStrings "You can also change the alarm itself: just click _„                  Open. You can choose all kinds of sounds, including _„                  MP3, midi and even movies!"„      AddStrings ""„      AddStrings "In fact, you don't even have to choose a particular sound. _„                  Alarmed defaults to a parrot call--and that should _„                  wake up even the dead."„      Line(0) = "Welcome!"                „    END CREATE„  END CREATE„END CREATE„„„SUB InitAlarm„  SetWindowLong(AlarmForm.Handle,-8,0)„  SetWindowLong(Application.Handle,-8,AlarmForm.Handle)„  AlarmEditLeft = -5„  AlarmLabelLeft = 28„  FOR x = 1 TO 3„    AlarmEdit(x).Parent = AlarmForm„    AlarmEdit(x).Top = 110 „    AlarmEdit(x).Left = AlarmEditLeft + 45„    AlarmEditLeft = AlarmEdit(x).Left„    AlarmEdit(x).Width = 30„    IF x = 1 THEN„      AlarmEdit(x).Hint = "Hour"„    ELSEIF x = 2 THEN„      AlarmEdit(x).Hint = "Minutes"„    ELSEIF x = 3 THEN„      AlarmEdit(x).Hint = "Seconds"„    END IF„    AlarmEdit(x).ShowHint = 1„    AlarmEdit(x).Font.Name = "Arial"„    AlarmEdit(x).Font.Size = 15„    IF x < 3 THEN„      AlarmLabel(x).Parent = AlarmForm„      AlarmLabel(x).Top = 105„      AlarmLabel(x).Left = AlarmLabelLeft + 45„      AlarmLabelLeft = AlarmLabel(x).Left „      AlarmLabel(x).Width = 10„      AlarmLabel(x).Alignment = 2„      AlarmLabel(x).LabelStyle = 2„      AlarmLabel(x).Font.Name = "Arial"„      AlarmLabel(x).Font.Size = 25„      AlarmLabel(x).Caption = ":"„      AMPM(x).Parent = AlarmForm „      AMPM(x).Top = 148„      AMPM(x).Width = 60„      AMPM(x).Font.Name = "Arial"„      AMPM(x).Font.Size = 15„      IF x = 1 THEN„        AMPM(x).Left = 175„        AMPM(x).Caption = "AM"„      ELSE„        AMPM(x).Left = 230„        AMPM(x).Caption = "PM"„      END IF„      AMPM(x).OnClick = Reminded„    END IF„  NEXT„  AlarmEdit(2).OnChange = CheckAMPM„END SUB„„SUB CheckAMPM„  IF Label1.Caption = "Alarm at:" THEN„    IF AMPM(1).Checked = 0 AND AMPM(2).Checked = 0 THEN„      PLAYWAV birds,1„      AlarmClock.Visible = 0„    END IF„  END IF„END SUB„„SUB DigitClock„  hour =  VAL(LEFT$(TIME$,2))„  min = VAL(MID$(TIME$,4,2))„  sec = VAL(RIGHT$(TIME$,2))     „  IF hour >= 12 AND hour < 24 THEN„    hour = hour - 12„    IF hour = 0 THEN hour = 12„    ampm$ = " PM"„  ELSEIF hour = 0 THEN „    hour = 12„    ampm$ = " AM"„  ELSE„    ampm$ = " AM"„  END IF„  thetime$ = STR$(hour) + MID$(TIME$,3,3) + RIGHT$(TIME$,3) + ampm$„  Label.Caption = thetime$„  AlarmForm.Caption = "Alarmed                               " + DATE$„END SUB„„SUB AlarmTime„  DigitClock„  IF clicked = 1 THEN EXIT SUB„  IF alarmed = 0 THEN„    IF VAL(AlarmEdit(1).Text) = hour THEN„      IF VAL(AlarmEdit(2).Text) = min THEN„        IF VAL(AlarmEdit(3).Text) = sec THEN„          IF (AMPM(1).Checked = 1 AND ampm$ = " AM") OR _„          (AMPM(2).Checked = 1 AND ampm$ = " PM") THEN „            PlayAlarm„            alarmed = 1„          END IF„        END IF„      END IF„    END IF„  ELSE„    PlayAlarm„  END IF„END SUB„„SUB Countdown„  DigitClock„  IF clicked = 1 THEN EXIT SUB„  IF runcount = 0 THEN„    hcount = VAL(AlarmEdit(1).Text)„    mcount = VAL(AlarmEdit(2).Text)„    scount = VAL(AlarmEdit(3).Text)„    count = hcount*3600 + mcount*60 + scount„  END IF„  IF runcount >= count AND count > 0 THEN „    PLAYWAV parrot,1„  END IF„  INC runcount„END SUB„„SUB Click„  PLAYWAV clicker,1„  IF clicked = 0 THEN„    clicked = 1„    OffButt.Hint = "Alarm is disabled"„  ELSE„    clicked = 0„    alarmed = 0„    runcount = 0„    OffButt.Hint = "Alarm is enabled"„  END IF„END SUB„„SUB Reminded„  PLAYWAV clicker,1„  AlarmClock.Visible = 1„END SUB„„SUB AlarmHow„  PLAYWAV clicker,1„  IF Label1.Caption = "Alarm at:" THEN„    Label1.Caption = "Alarm after:"„  ELSE„    Label1.Caption = "Alarm at:"„  END IF„END SUB„„SUB CountdownMode„  IF Label1.Caption = "Alarm at:" THEN„    AlarmTime„  ELSE„    Countdown„  END IF„  Sweep„END SUB „„SUB Sweep„  AlarmForm.TextOut(90,59,TIME$,0,100050001)„  incsec = sec*6 - 90„  incmin = min*6 - 90„  IF hour = 12 THEN hour = 0 „  inchour = (hour + min/60)*30 - 90 „  anglesec = 0.0175*incsec  '3.14153/180„  anglemin = 0.0175*incmin„  anglehour = 0.0175*inchour„  xsec = 40*cos(anglesec) + 50„  ysec = 40*sin(anglesec) + 48 „  xmin = 40*cos(anglemin) + 50„  ymin = 40*sin(anglemin) + 48„  IF hour < 7 THEN„    xhour = SQR(ABS(625-(25*sin(anglehour))^2)) + 50„  ELSE„    xhour = -SQR(ABS(625-(25*sin(anglehour))^2)) + 50„  END IF„  yhour = 25*sin(anglehour) + 48„  AlarmClock.Circle(6,4,94,92,&HFFFFF,400050004)„  AlarmClock.Circle(48,8,52,12,&HFFFFFF,&HFFFFFF)„  AlarmClock.Circle(48,84,52,88,&HFFFFFF,&HFFFFFF)„  AlarmClock.Circle(10,48,14,52,&HFFFFFF,&HFFFFFF)„  AlarmClock.Circle(86,48,90,52,&HFFFFFF,&HFFFFFF)„  AlarmClock.Line(50,48,xsec,ysec,&HFFFFFF)„  AlarmClock.Line(50,48,xmin,ymin,&HFFFB)„  AlarmClock.Line(50,48,xhour,yhour,&HFFFB)„  AlarmClock.Flip      „END SUB„„SUB GetMM„  CREATE OpenMM As QOPENDIALOG„    Filter = "Multimedia files|*.m3u;*.rmi;*.midi;*.mid;*.wav;*.au;*.snd;*.mpa;*.wma;_„      *.mp2;*.mp3;*.asx;*.asf;*.aif;*.iff;*.mpm;*.m1v;*.mpeg;*.mpg;*.avi;*.mov;*.wmv;*.mpv;*.qt;*.dat|_„      Audio files|*.m3u;*.rmi;*.midi;*.mid;*.wav;*.au;*.snd;*.wma;_„      *.mp2;*.mp3;*.aif;*.iff|All files|*.*"„  END CREATE„  IF OpenMM.Execute = 1 THEN„    filePath$ = STRING$(165,0)„    lenFilename = GetShortPathName_„    (OpenMM.FileName,VARPTR(filePath$),164)„    AlarmFileName$ = LEFT$(filePath$,lenFilename)„  END IF„END SUB„„SUB PlayAlarm„  IF AlarmFileName$ = "" THEN „    PLAYWAV parrot,1„  ELSE„    PlayMedia("open " + AlarmFileName$ + " type MpegVideo",0,0,0)„    PlayMedia("play " + AlarmFileName$ + " from 0",0,0,0)„    DO„      DOEVENTS„      PlayMedia("status " + AlarmFileName$ + " mode",VARPTR(mAudio),256,0)„    LOOP UNTIL LEFT$(mAudio,7) = "stopped" OR clicked = 1 „    PlayMedia("close " + AlarmFileName$,0,0,0)„  END IF„END SUB„„SUB About„  MESSAGEBOX ("  This is freeware." + CHR$(13) +_„  "Copyright (c) 2003" + CHR$(13) +_ „  "  Achilles B. Mina" + CHR$(13) + CHR$(13) +_ „  "     Alatmed is yet" + CHR$(13) +_ „  "another alarm clock." + CHR$(13) +_ „  "   It was written in" + CHR$(13) +_ „  "         Rapid-Q." + CHR$(13)  + CHR$(13) +_ „  "    It demonstrates" + CHR$(13) +_ „  "   Rapid-Q's talent" + CHR$(13) +_ „  "for producing highly" + CHR$(13) +_ „  " useful apps easily." + CHR$(13) +_ „  "  It also shows the" + CHR$(13) +_ „  "   author's lack of" + CHR$(13) +_ „  "         talent for" + CHR$(13) +_ „  "  innovative coding.","Alarmed",0)„END SUB„„SUB Help„  AlarmHelp.Visible = 1„END SUB„„SUB Off„  Application.Terminate„END SUB„„InitAlarm„AlarmForm.ShowModal„Michael Webster                Milli-second Delay             mfwebster@pdq.net              10-19-03 (  :  )       XPB!BASIC              76   1868     DELAY.BAS   ' DELAY.BAS„„DECLARE SUB SyncTimer ()„DECLARE SUB Delay (millisecond%)„„' This program contains a millisecond delay procedure„' that should work reliably under Windows XP, along„' with a support procedure and some test code.„'„' Running under Windows, the actual delay interval„' is somewhat variable, but typically within ~4% of„' the specified interval.„„' Calibrate the delay loop count.„Delay 0„' Wait for disk activity to subside.„Delay 2000„„SyncTimer„„' This test should require 2.00 seconds.„s! = TIMER„FOR i% = 1 TO 200„    Delay 10„NEXT„f! = TIMER„PRINT USING "#.##"; f! - s!„„SUB Delay (milliseconds%) STATIC„    ' Delays for <milliseconds%> ms before returning.„    '„    ' Calibrates the delay loop count on first call.„„    IF fRun% THEN„        loops& = milliseconds% * loopsPerMs&„        FOR i& = 1 TO loops&„            x! = x! ^ 2„        NEXT„    ELSE„        loops& = 100„        SyncTimer„        DO„            s! = TIMER„            FOR i& = 1 TO loops&„                x! = x! ^ 2„            NEXT„            f! = TIMER„            IF f! > s! + 1 THEN„                fRun% = -1„                EXIT DO„            END IF„            loops& = loops& * 2„        LOOP„        loopsPerMs& = loops& / (f! - s!) / 1000„    END IF„END SUB„„SUB SyncTimer„    ' Waits for the next system timer tick before„    ' returning.„    '„    ' The value of the TIMER function changes in„    ' increments of ~55ms, corresponding to the„    ' period of the system timer tick that it is„    ' derived from. Because the timing of an„    ' interval requires two calls to the TIMER„    ' function, the uncertainty in the interval„    ' is ~110ms. Synchronizing with the timer„    ' tick will reduce the uncertainty to ~55ms.„   „    s! = TIMER„    DO„    LOOP UNTIL s! <> TIMER„„END SUB„„

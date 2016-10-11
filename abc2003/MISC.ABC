@@ -1,0 +1,254 @@
+kaland white                   Commission Calculation         Kalandwhite1@aol.com           03-16-03 (  :  )       Qbasic, QB, PDS        20   738      Sales.bas   REM Sales.bas„REM Determining a Salesperson's Commission„REM ******************************************„REM Clear Screen„CLS„REM Request Data from Operator„INPUT "Commission rate ===========> ", Rate„INPUT "Week 1 sales ==============> ", Week1„INPUT "Week 2 sales ==============> ", Week2 „INPUT "Week 3 sales ==============> ", Week3„INPUT "Week 4 sales ==============> ", Week4„INPUT "Week 5 sales ==============> ", Week5„INPUT "Week 6 sales ==============> ", Week6„INPUT "Return Sales ==============> ", Returns„REM Calculate the Earned Commission„Commission = Rate * ( Week1 + Week2 + Week3 + Week4 + Week5 + Week6 - Returns)„REM Display the Earned Commission„PRINT„PRINT "Earned commission ===>"; Commission„END„Dieter Folger                  Periodic Table of Elements     bnv-bamberg.de                 06-13-03 (  :  )       RAPID-Q                1    10326    Ptable.bas  '---------------------------------------
+'Periodic Table of Elements for RapidQ
+'Freeware (c) 2003 by Dieter Folger
+'---------------------------------------
+$INCLUDE "RapidQ.INC"
+$TYPECHECK ON
+$ESCAPECHARS ON
+'$OPTION Icon "atom.ico"
+DECLARE SUB Clicked (Sender AS qPanel)
+DECLARE SUB DrawLine
+DECLARE SUB Minimize
+Dim Colors(8) AS INTEGER
+    Colors(1) = &h8CF4F4 
+    Colors(2) = &h00FF00 
+    Colors(6) = &hC7fCAD 
+    Colors(4) = &hE1E1E1 
+    Colors(5) = &h88BDF2
+    Colors(3) = &hC6A4F9 
+    Colors(7) = &hFDFAB5
+    Colors(8) = &hBDBDFF
+DIM Col(115) AS BYTE, Row(115) AS BYTE, Clr(115) AS BYTE, El(115) AS STRING
+DIM Info(115) AS STRING, i AS INTEGER
+   
+CREATE pFont AS qFont 
+   Name = "Arial"
+   Size = 10
+   AddStyles(fsBold)
+END CREATE
+ 
+CREATE iFont AS qFont
+   Name = "Arial"
+   Size = 8
+END CREATE
+
+CREATE Form AS qForm
+   Caption = "Periodic Table of Elements"
+   Width = 510 : Height = 440  
+   delBorderIcons(biMaximize)
+   WndProc = Minimize
+   onPaint = DrawLine
+   CREATE Label1 AS qLabel
+      Left = 120 : Width = 100
+      Height = 150 : Font = PFont
+      Caption = "Atomic Number:\nAtomic Weight:\nName:\nSymbol:\nMelting Point (∞C):\nBoiling Point (∞C):\nDensity:\nDiscovery:" 
+   END CREATE   
+   CREATE Label2 AS qLabel
+      Left = 240 : Width = 100
+      Height = 150 : Font = PFont
+   END CREATE
+   CREATE Label3 AS qLabel
+      Top = 60 : Left = 30
+      Font = iFont : Caption = "I A"
+   END CREATE
+   CREATE Label4 AS qLabel
+      Top = 60 : Left = 450
+      Font = iFont : Caption = "VIII A"
+    END CREATE
+    CREATE Label5 AS qLabel
+       Top = 85 : Left = 55
+       Font = iFont : Caption = "II A"
+    END CREATE
+    CREATE Label6 AS qLabel
+       Top = 85 : Left = 330
+       Font = iFont : Caption = "III A  IV A V A  VI A VII A"
+    END CREATE
+    CREATE Label7 AS qLabel
+       Top = 135 : Left = 80
+       Font = iFont 
+       Caption = "III B  IV B  V B  VI B VII B |----- VIII B -----|   I B    II B"
+     END CREATE
+END CREATE
+
+DIM Table(115)  AS qPanel
+FOR i = 1 TO 115 :  READ Col(i), Row(i), Clr(i), El(i), Info(i) : NEXT
+FOR i = 1 TO 115
+    Table(i).Parent = Form
+    Table(i).Left = Col(i) * 25
+    Table(i).Top = Row(i) * 25 + 50
+    Table(i).Width = 25
+    Table(i).Height = 25
+    Table(i).Caption = El(i)
+    Table(i).Color = Colors(Clr(i)) 
+    Table(i).Font = pFont
+    Table(i).Hint = STR$(i)
+    Table(i).onClick = Clicked 
+NEXT  
+DIM Panel(8) AS qPanel
+DIM iTop AS Integer, iLeft AS INTEGER
+iTop = 350 : iLeft = 20
+FOR i = 1 TO 8
+     Panel(i).Parent = Form
+     Panel(i).Left = iLeft
+     Panel(i).Top = iTop
+     Panel(i).Height = 20
+     Panel(i).Width = 100
+     Panel(i).Color = Colors(i)
+     INC iTop,25
+     IF i MOD 2 = 0 THEN iTop = 350 : INC iLeft,120
+NEXT     
+     Panel(1).Caption = "Nonmetals"
+     Panel(2).Caption= "Noble gases"
+     Panel(3).Caption = "Alkali metals"
+     Panel(4).Caption = "Alkaline earth metals"
+     Panel(5).Caption = "Other metals"
+     Panel(6).Caption = "Lanthanide series"
+     Panel(7).Caption = "Transition metals"
+     Panel(8).Caption = "Actanide series"
+Form.ShowModal
+'-----------------------------
+SUB Clicked (Sender AS qPanel)
+'-----------------------------
+Dim s AS STRING
+ s = Info(VAL(Sender.Hint))
+ 'EscChar \n doesn't work from DATA lines
+ 'It's inserted here
+ s = ReplaceSubStr$(s," ","\n")
+ Label2.Caption = s    
+END SUB
+'---------------------
+SUB DrawLine
+'---------------------
+ Form.Line(70,215,90,215,0)
+ Form.Line(90,215,90,290,0)
+ Form.Line(90,290,100,290,0)
+
+ Form.Line(70,235,80,235,0)
+ Form.Line(80,235,80,310,0)
+ Form.Line(80,310,100,310,0)
+END SUB
+
+DATA 1,1,1,"H","1 1.0079 Hydrogen H -259 -253 0.09 1776"
+DATA 18,1,2,"He","2 4.0026 Helium He -272 -269 0.18 1895"
+
+DATA 1,2,3,"Li","3 6.941 Lithium Li 180 1347 0.53 1817"
+DATA 2,2,4,"Be","4 9.0122 Beryllium Be 1278 2970 1.85 1797"
+DATA 13,2,1,"B","5 10.811 Boron B 2300 2550 2.34 1808"
+DATA 14,2,1,"C","6 12.0107 Carbon C 3500 4827 2.26 ancient"
+DATA 15,2,1,"N","7 14.0067 Nitrogen N -210 -196 1.25 1772"
+DATA 16,2,1,"0","8 15.9994 Oxygen O -218 -183 1.43 1774"
+DATA 17,2,1,"F","9 18.9984 Fluorine F -220 -188 1.7 1886"
+DATA 18,2,2,"Ne","10 20.1797 Neon Ne -249 -246 0.9 1898"
+
+DATA 1,3,3,"Na","11 22.9897 Sodium Na 98 883 0.97 1807"
+DATA 2,3,4,"Mg","12 24.305 Magnesium Mg 639 1090 1.74 1755"
+DATA 13,3,5,"Al","13 26.9815 Aluminum Al 660 2467 2.7 1825"
+DATA 14,3,1,"Si","14 28.0855 Silicon Si 1410 2355 2.33 1824"
+DATA 15,3,1,"P","15 30.9738 Phosphorus P 44 280 1.82 1669"
+DATA 16,3,1,"S","16 32.065 Sulfur S 113 445 2.07 ancient"
+DATA 17,3,1,"Cl","17 35.453 Chlorine Cl -101 -35 3.21 1774"
+DATA 18,3,2,"Ar","18 39.948 Argon Ar -189 -186 1.78 1894"
+
+DATA 1,4,3,"K","19 39.0983 Potassium K 64 774 0.86 1807"
+DATA 2,4,4,"Ca","20 40.078 Calcium Ca 839 1484 1.55 1808"
+DATA 3,4,7,"Sc","21 44.9559 Scandium Sc 1539 2832 2.99 1879"
+DATA 4,4,7,"Ti","22 47.867 Titanium Ti 1660 3287 4.54 1791"
+DATA 5,4,7,"V","23 50.9415 Vanadium V 1890 3380 6.11 1830"
+DATA 6,4,7,"Cr","24 51.9961 Chromium Cr 1857 2672 7.19 1797"
+DATA 7,4,7,"Mn","25 54.938 Manganese Mn 1245 1962 7.43 1774"
+DATA 8,4,7,"Fe","26 55.845 Iron Fe 1535 2750 7.87 ancient"
+DATA 9,4,7,"Co","27 58.9332 Cobalt Co 1495 2870 8.9 1735"
+DATA 10,4,7,"Ni","28 58.6934 Nickel Ni 1453 2732 8.9 1751"
+DATA 11,4,7,"Cu","29 63.546 Copper Cu 1083 2567 8.96 ancient"
+DATA 12,4,7,"Zn","30 65.39 Zinc Zn 420 907 7.13 ancient"
+DATA 13,4,5,"Ga","31 69.723 Gallium Ga 30 2403 5.9 1875"
+DATA 14,4,5,"Ge","32 72.64 Germanium Ge 937 2830 5.32 1886"
+DATA 15,4,1,"As","33 74.9216 Arsenic As 81 613 5.72 ancient"
+DATA 16,4,1,"Se","34 78.96 Selenium Se 217 685 4.79 1817"
+DATA 17,4,1,"Br","35 79.904 Bromine Br -7 59 3.12 1826"
+DATA 18,4,2,"Kr","36 83.8 Krypton Kr -157 -153 3.75 1898"
+
+DATA 1,5,3,"Rb","37 85.4678 Rubidium Rb 39 688 1.63 1861"
+DATA 2,5,4,"Sr","38 87.62 Strontium Sr 769 1384 2.54 1790"
+DATA 3,5,7,"Y","39 88.9059 Yttrium Y 1523 3337 4.47 1794"
+DATA 4,5,7,"Zr","40 91.224 Zirconium Zr 1852 4377 6.51 1789"
+DATA 5,5,7,"Nb","41 92.9064 Niobium Nb 2468 4927 8.57 1801"
+DATA 6,5,7,"Mo","42 95.94 Molybdenum Mo 2617 4612 10.22 1781"
+DATA 7,5,7,"Tc","43 98 Technetium Tc 2200 4877 11.5 1937"
+DATA 8,5,7,"Ru","44 101.07 Ruthenium Ru 2250 3900 12.37 1844"
+DATA 9,5,7,"Rh","45 102.9055 Rhodium Rh 1966 3727 12.41 1803"
+DATA 10,5,7,"Pd","46 106.42 Palladium Pd 1552 2927 12.02 1803"
+DATA 11,5,7,"Ag","47 107.8682 Silver Ag 962 2212 10.5 ancient"
+DATA 12,5,7,"Cd","48 112.411 Cadmium Cd 321 765 8.65 1817"
+DATA 13,5,5,"In","49 114.818 Indium In 157 2000 7.31 1863"
+DATA 14,5,5,"Sn","50 118.71 Tin Sn 232 2270 7.31 ancient"
+DATA 15,5,5,"Sb","51 121.76 Antimony Sb 630 1750 6.68 ancient"
+DATA 16,5,1,"Te","52 127.6 Tellurium Te 449 990 6.24 1783"
+DATA 17,5,1,"J","53 126.9045 Iodine I 114 184 4.93 1811" '????
+DATA 18,5,2,"Xe","54 131.293 Xenon Xe -112 -108 5.9 1898"
+
+DATA 1,6,3,"Cs","55 132.9055 Cesium Cs 29 678 1.87 1860"
+DATA 2,6,4,"Ba","56 137.327 Barium Ba 725 1140 3.59 1808"
+DATA 4,6,7,"Hf","72 178.49 Hafnium Hf 2150 5400 13.31 1923"
+DATA 5,6,7,"Ta","73 180.9479 Tantalum Ta 2996 5425 16.65 1802"
+DATA 6,6,7,"W","74 183.84 Tungsten W 3410 5660 19.35 1783"
+DATA 7,6,7,"Re","75 186.207 Rhenium Re 3180 5627 21.04 1925"
+DATA 8,6,7,"Os","76 190.23 Osmium Os 3045 5027 22.6 1803"
+DATA 9,6,7,"Ir","77 192.217 Iridium Ir 2410 4527 22.4 1803"
+DATA 10,6,7,"Pt","78 195.078 Platinum Pt 1772 3827 21.45 1735"
+DATA 11,6,7,"Au","79 196.9665 Gold Au 1064 2807 19.32 ancient"
+DATA 12,6,7,"Hg","80 200.59 Mercury Hg -39 357 13.55 ancient"
+DATA 13,6,5,"Tl","81 204.3833 Thallium Tl 303 1457 11.85 1861"
+DATA 14,6,5,"Pb","82 207.2 Lead Pb 327 1740 11.35 ancient"
+DATA 15,6,5,"Bi","83 208.9804 Bismuth Bi 271 1560 9.75 ancient"
+DATA 16,6,5,"Po","84 209 Polonium Po 254 962 9.3 1898"
+DATA 17,6,1,"At","85 210 Astatine At 302 337 - 1940"
+DATA 18,6,2,"Rn","86 222 Radon Rn -71 -62 9.73 - 1900"
+
+DATA 1,7,3,"Fr","87 223 Francium Fr 27 677 - 1939"
+DATA 2,7,4,"Ra","88 226 Radium Ra 700 1737 5.5 1898"
+DATA 4,7,7,"Rf","104 261 Rutherfordium Rf ca.2100 ca.5500 18.1 1964"
+DATA 5,7,7,"Db","105 262 Dubnium Db ca.2500 ca.5500 - 1967"
+DATA 6,7,7,"Sg","106 266 Seaborgium Sg - - - 1974"
+DATA 7,7,7,"Bh","107 264 Bohrium Bh - - - 1981" '!!!
+DATA 8,7,7,"Hs","108 277 Hassium Hs - - - 1984"
+DATA 9,7,7,"Mt","109 268 Meitnerium Mt - - - 1982"
+DATA 10,7,7,"Uun","110 269 Ununnilium Uun - - - 1994"
+DATA 11,7,7,"Uuu","111 272 Unununium Uuu - - - 1994"
+DATA 12,7,7,"Uub","112 277 Ununbium Uub - - - 1996"
+DATA 14,7,7,"Uuq","114 - Ununquadium Uuq - - - -" 
+DATA 16,7,7,"Uuh","116 - Ununhexium Uuh - - - -"
+DATA 18,7,7,"Uuo","118 - Ununoctium Uuo - - - -"
+
+DATA 4,9,6,"La","57 138.9055 Lanthanum La 920 3469 6.15 1839"
+DATA 5,9,6,"Ce","58 140.116 Cerium Ce 795 3257 6.77 1803"
+DATA 6,9,6,"Pr","59 140.9077 Praseodymium Pr 935 3127 6.77 1885"
+DATA 7,9,6,"Nd","60 144.24 Neodymium Nd 1010 3127 7.01 1885"
+DATA 8,9,6,"Pm","61 145 Promethium Pm 1100 3000 7.3 1945"
+DATA 9,9,6,"Sm","62 150.36 Samarium Sm 1072 1900 7.52 1879"
+DATA 10,9,6,"Eu","63 151.964 Europium Eu 822 1597 5.24 1901"
+DATA 11,9,6,"Gd","64 157.25 Gadolinium Gd 1311 3233 7.9 1880"
+DATA 12,9,6,"Tb","65 158.9253 Terbium Tb 1360 3041 8.23 1843"
+DATA 13,9,6,"Dy","66 162.5 Dysprosium Dy 1412 2562 8.55 1886"
+DATA 14,9,6,"Ho","67 164.9303 Holmium Ho 1470 2720 8.8 1867"
+DATA 15,9,6,"Er","68 167.259 Erbium Er 1522 2510 9.07 1842"
+DATA 16,9,6,"Tm","69 168.9342 Thulium Tm 1545 1727 9.32 1879"
+DATA 17,9,6,"Yb","70 173.04 Ytterbium Yb 824 1466 6.9 1878"
+DATA 18,9,6,"Lu","71 174.967 Lutetium Lu 1656 3315 9.84 1907"
+
+DATA 4,10,8,"Ac","89 227 Actinium Ac 1050 3200 10.07 1899"
+DATA 5,10,8,"Th","90 232.0381 Thorium Th 1750 4790 11.72 1829"
+DATA 6,10,8,"Pa","91 231.0359 Protactinium Pa 1568 - 15.4 1913"
+DATA 7,10,8,"U","92 238.0289 Uranium U 1132 3818 18.95 1789"
+DATA 8,10,8,"Np","93 237 Neptunium Np 640 3902 20.2 1940"
+DATA 9,10,8,"Pu","94 244 Plutonium Pu 640 3235 19.84 1940"
+DATA 10,10,8,"Am","95 243 Americium Am 994 2607 13.67 1944"
+DATA 11,10,8,"Cm","96 247 Curium Cm 1340 - 13.5 1944"
+DATA 12,10,8,"Bk","97 247 Berkelium Bk 986 - 14.78 1949"
+DATA 13,10,8,"Cf","98 251 Californium Cf 900 - 15.1 1950"
+DATA 14,10,8,"Es","99 252 Einsteinium Es 860 - - 1952"
+DATA 15,10,8,"Fm","100 257 Fermium Fm 1527 - - 1952"
+DATA 16,10,8,"Md","101 258 Mendelevium Md - - - 1955"
+DATA 17,10,8,"No","102 259 Nobelium No 827 - - 1958"
+DATA 18,10,8,"Lr","103 262 Lawrencium Lr 1627 - - 1961"
+„

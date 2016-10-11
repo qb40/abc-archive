@@ -1,0 +1,576 @@
+Dieter Folger                  List/Cross Reference PB Source ba2049@bnv-bamberg.de          06-12-03 (  :  )       PB                     1    22024    Pbxref.bas  '=========================================================================
+'PBXREF.BAS is a utility that writes a structured listing of a PB source
+'code and / or a cross reference list with all used variables, constants,
+'labels, subs and functions.
+'(c) by Dieter Folger 1993-1996
+'A call to PBXREF without parameters shows the syntax.
+'Try PBXREF on its own (unstructured) code by calling:
+'PBXREF PBXREF.BAS - this will write 2 files:
+'PBXREF.STR (the structured listing) and PBXREF.VAR (the variable list)
+'Note:
+'The program is far from being perfect, but it was and is useful for me.
+'=========================================================================
+$COMPILE EXE
+$LIB ALL OFF
+$STRING 4
+$OPTIMIZE SPEED
+$DYNAMIC
+DEFINT A-Z
+ON ERROR GOTO ErrorHandle
+Starttime$ = TIME$
+Setup
+OpenFiles
+ReadPBWords
+GOSUB ReadSource
+IF CrossRef% THEN WriteVarFile
+Endtime$ = TIME$: PRINT
+PRINT " Finished after"; PastSeconds&(Starttime$, Endtime$); "seconds";
+IF PastSeconds&(StartTime$,Endtime$) > 30 THEN
+PRINT " =" ;FileLin% \ PastSeconds&(StartTime$, EndTime$);"lines per second"
+END IF
+END
+'-------------------------------------------------------------------------
+ReadSource:
+'-------------------------------------------------------------------------
+PRINT " PBXREF 2.1 for PowerBASIC 3.2"
+PRINT " A cross reference utility and structured code writer"
+PRINT " Freeware (c) 1995 by D. Folger"
+IF Listing% THEN
+PRINT #2, "' " + STRING$(70, CHR$(61))
+PRINT #2, "' PBXREF file written "; DATE$; "  "; LEFT$(TIME$, 5)
+PRINT #2, "' Sourcefile: "; BasFile$; "   Filesize:"; BasFileLen&
+PRINT #2, "' " + STRING$(70, CHR$(45))
+PRINT : PRINT " SourceFile: "; BasFile$; " => TargetFile: ";
+PRINT ListFile$: PRINT " Writing"; FileLin%; "lines of code";
+IF LineNumber% THEN PRINT " with line numbers" ELSE PRINT
+PRINT
+ELSE
+PRINT " "; VarFile$: PRINT " Analyzing"; FileLin%; "lines of code": PRINT
+END IF
+PRINT S$; STRING$(40, CHR$(176));
+WHILE NOT EOF(1)
+NextOne:
+LINE INPUT #1, Lin$
+Lin$ = LTRIM$(RTRIM$(Lin$, ANY CHR$(9,32)), ANY CHR$(9,32))
+IF Empty% = 0 AND LEN(Lin$) = 0 AND Lin% < FileLin% THEN GOTO NextOne
+INCR Lin%
+Ln$ = Lin$
+'------- show progress --------------------
+Percent% = INT(Lin% / FileLin% * 100)
+Percent$ = STRING$(INT(Percent% * .4), CHR$(219))
+LOCATE CSRLIN, 1: PRINT S$ + Percent$;
+LOCATE CSRLIN, 42: PRINT S$; RTRIM$(STR$(Percent%)); "%";
+'------------------------------------------
+GOSUB HandleLines
+'---------- PRINT Lin$ to file ------------
+IF Listing% THEN PRINT #2, " " + Lin$
+WEND
+CLOSE
+FOR inc% = 1 TO IncFile% : GOSUB ReadIncFile : NEXT
+RETURN
+'-----------------------------------------------------------------------
+HandleLines:
+'-----------------------------------------------------------------------
+T$ = UCASE$(Ln$)
+'---------- $IF 0 - $ENDIF ------
+IF Comment% AND INSTR(T$, "$ENDIF") = 1 THEN Comment% = 0
+IF Comment% THEN Ln$ = "'" + Ln$ :T$ = "'"+T$
+IF Comment% = 0 THEN
+Cmt% = INSTR(T$,"$IF")
+IF Cmt% = 1 THEN
+Cz$ = LEFT$(LTRIM$(MID$(T$,Cmt% + 3)),1)
+IF Cz$ = "0" THEN Comment% = -1
+END IF
+END IF
+'------- $INCLUDE ---------------
+IF INSTR(T$, "$INCLUDE") THEN GOSUB FoundIncFile
+'------- delete quoted parts ----
+IF INSTR(T$,"REM ") > 1 OR INSTR(T$,"'") > 1 OR _
+INSTR(T$,"REM ") = 0 OR INSTR(T$,"'") = 0 THEN
+WHILE INSTR(T$, CHR$(34))
+Q1% = INSTR(T$, CHR$(34)): Q2% = INSTR(Q1% + 1, T$, CHR$(34))
+C1% = INSTR(T$, "'") : C2% = INSTR(T$,"REM")
+IF C1% = 0 THEN C1% = LEN(T$)
+IF C2% = 0 THEN C2% = LEN(T$)
+IF C1% < Q1% OR C2% < Q1% OR C1% = 1 _
+OR C2% = 1 THEN EXIT LOOP  ' Quotes in comment or comment line
+IF Q2% = 0 THEN Q2% = LEN(T$)
+Ln$ = LEFT$(Ln$, Q1% - 1) + MID$(Ln$, Q2% +1)
+T$ = LEFT$(T$,Q1%-1)+MID$(T$,Q2%+1)
+WEND
+END IF
+' --------- ASM comment ---------
+IF (INSTR(T$,"ASM ") = 1 OR INSTR(T$, "! ") = 1) AND INSTR(T$,";") THEN
+Ln$ = LEFT$(Ln$, INSTR(T$, ";") - 1) 'ASM comment
+END IF
+'---------- REM or <'> ----------
+IF INSTR(T$, "REM ") THEN Ln$ = LEFT$(Ln$, INSTR(T$, "REM ") - 1)
+IF INSTR(T$, "'") THEN Ln$ = LEFT$(Ln$, INSTR(T$, "'") - 1)
+Ln$ = ReplaceChar$(Ln$,1)
+'---------- Format listing ------
+IF Listing% THEN GOSUB FormatLine
+'---------- Get variables -------
+GOSUB GetVars
+RETURN
+'-------------------------------------------------------------------------
+FormatLine:
+'-------------------------------------------------------------------------
+T$ = RTRIM$(UCASE$(Ln$))
+LblFound% = 0 : IF INSTR(T$,":") = LEN(T$) - 1 THEN LblFound% = 1
+T$ = LTRIM$(ReplaceChar$(T$,2))
+IF T$ = "" AND Offset% > 1 THEN 'keep indent when whole line is comment
+Lin$ = SPACE$((Offset% + TempOffset%) * 3) + Lin$
+END IF
+IF T$ > "" THEN
+KeyWord$ = LEFT$(T$,INSTR(T$,S$)-1)
+'--------------------------------------------------------------
+' These are reserved words that change offset in current line
+'--------------------------------------------------------------
+IF KeyWord$ = "END" THEN
+IF INSTR(T$, " SELECT") THEN DECR Offset%,2
+IF INSTR(T$, " IF") THEN DECR Offset%
+IF INSTR(T$, " TYPE") THEN DECR Offset%
+IF INSTR(T$, " UNION") THEN DECR Offset%
+IF INSTR(T$, " SUB") THEN Offset% = 0
+IF INSTR(T$, " FUNCTION") THEN Offset% = 0
+END IF
+IF Keyword$ = "CASE" THEN TempOffset% = -1
+IF KeyWord$ = "LOOP" THEN Decr Offset%
+IF KeyWord$ = "WEND" THEN DECR Offset%
+IF KeyWord$ = "NEXT" THEN DECR Offset%
+IF KeyWord$ = "ELSE" THEN IF Offset%  THEN TempOffset% = -1
+IF KeyWord$ = "ELSEIF" THEN IF Offset% THEN TempOffset% = -1
+IF KeyWord$ = "DATA" = 1 THEN Offset% = 0
+IF LblFound% THEN IF Offset% THEN TempOffset% = -1: LblFound% = 0
+IF Offset% < 0 THEN Offset% = 0
+'----------------------------------------
+If Offset%=0 AND TempOffset% < 0 THEN TempOffset% =0
+'-> inserted 05/16/96 just in case (bad run time error)
+'----------------------------------------
+Lin$ = SPACE$((Offset% + TempOffset%) * 3) + LTRIM$(Lin$)
+TempOffset% = 0
+END IF
+IF RIGHT$(Lin$, 3) = " _ " THEN TempOffset% = 1
+IF LineNumber% THEN
+IF LEN(Lin$) < 70 THEN Lin$ = LEFT$(Lin$ + SPACE$(70), 70)
+Lin$ = Lin$ + " '" + STR$(Lin%) 'add line number
+END IF
+IF T$ > "" THEN
+'------------------------------------------------------------------
+' These are reserved words that change offset in next line
+'------------------------------------------------------------------
+IF RIGHT$(T$, 6) = " THEN " AND _
+INSTR(T$,"ELSEIF ") = 0 THEN INCR Offset%
+'IF KeyWord$= "LOOP" AND INSTR(T$, "WHILE") THEN INCR Offset%
+IF KeyWord$ = "WHILE"  AND INSTR(T$, " WEND") = 0 _
+AND INSTR(T$, "LOOP") = 0 THEN INCR Offset%
+'-------------------------------------------- 
+IF KeyWord$ = "DO" AND INSTR(T$, "LOOP") = 0 THEN INCR Offset%
+'-------------------------------------------- 
+IF KeyWord$ = "FOR" AND INSTR(T$, "NEXT") = 0 THEN INCR Offset%
+IF KeyWord$ = "TYPE" OR KeyWord$ = "UNION" THEN INCR Offset%
+IF KeyWord$ = "FUNCTION" OR KeyWord$ = "SUB" THEN 
+INCR Offset%
+END IF
+IF KeyWord$ = "SELECT" THEN INCR Offset%, 2
+IF Offset% < 0 THEN Offset% = 0
+END IF
+RETURN
+'------------------------------------------------------------------------
+ReadIncFile:
+'------------------------------------------------------------------------
+IncVarFile$ = IncFile$(Inc%)
+IF Exist%(IncVarFile$) = 0 THEN RETURN
+e% = INSTR(IncVarFile$, ".")
+IF e% THEN IncVarFile$ = LEFT$(IncFile$(Inc%), e%-1)
+IncVarFile$ = IncVarFile$ + ".STR"
+OPEN IncFile$(Inc%) FOR INPUT AS #9
+IncludeFileLen& = LOF(9) : IncLin% = 0
+WHILE NOT EOF(9):LINE INPUT #9, InLin$: INCR IncLin%:WEND
+CLOSE #9
+LinNum(IncFile%) = IncLin%
+OPEN IncFile$(Inc%) FOR INPUT AS #9
+OPEN IncVarFile$ FOR OUTPUT AS #7
+StartLin% = Lin% \ 100
+IF Lin% MOD 100 THEN INCR StartLin%
+TempLin% = StartLin% * 100
+INCR IncFileStart% :IncFileStart%(Inc%) = TempLin%
+PRINT #7, " ' " + STRING$(76, CHR$(61))
+PRINT #7, " ' PBXREF Structured file "; DATE$; "  "; LEFT$(TIME$, 5)
+PRINT #7, " ' Include file "; IncFile$(Inc%); "  Filesize"; IncludeFileLen&
+PRINT : PRINT : PRINT
+LOCATE 10, 1: PRINT SPACE$(300); : LOCATE 10, 1
+PRINT " Includefile: "; IncFile$(Inc%); " => TargetFile: ";
+IF Listing% THEN
+PRINT " " + IncVarFile$
+LOCATE CSRLIN, 1: PRINT
+PRINT " Writing"; IncLin%; "lines of code";
+IF LineNumber% THEN PRINT " with line numbers" ELSE PRINT
+PRINT
+ELSE
+PRINT VarFile$
+PRINT " Analyzing"; IncLin%; "lines of code": PRINT
+END IF
+LOCATE CSRLIN, 1: PRINT S$; STRING$(40, CHR$(176));
+InLi% = 0
+WHILE NOT EOF(9)
+NextLin:
+LINE INPUT #9, Lin$
+Lin$ = LTRIM$(RTRIM$(Lin$, ANY CHR$(9,32)), ANY CHR$(9,32))
+IF Empty% = 0 AND LEN(Lin$) = 0 AND Lin% < FileLin% THEN GOTO NextLin
+INCR InLi% : Ln$ = Lin$
+Lin% = TempLin% + InLi%
+'------------------------------------
+Percent% = INT(InLi% / IncLin% * 100)
+Percent$ = STRING$(INT(Percent% * .4), CHR$(219))
+LOCATE CSRLIN, 1: PRINT S$; Percent$;
+LOCATE CSRLIN, 42: PRINT S$; RTRIM$(STR$(Percent%)); "%";
+'------------------------------------
+GOSUB HandleLines
+IF Listing% THEN PRINT #7, Lin$
+WEND
+CLOSE #7: CLOSE #9
+RETURN
+'-------------------------------------------------------------------------
+FoundIncFile:
+'-------------------------------------------------------------------------
+INC$ = UCASE$(Lin$): c% = INSTR(INC$, "$INCLUDE")
+LeftC% = INSTR(c%, INC$, CHR$(34))
+IF LeftC% THEN RightC% = INSTR(LeftC% + 1, INC$, CHR$(34))
+IF LeftC% AND RightC% AND RightC% - LeftC% < 13 THEN
+IncFile$ = MID$(INC$, LeftC% + 1, RightC% - 1 - LeftC%)
+INCR IncFile%: IncFileExist%(IncFile%) = 0
+IncFile$(IncFile%) = IncFile$
+IF EXIST(IncFile$(IncFile%)) THEN
+IncFileExist%(IncFile%) = 1
+END IF
+END IF
+RETURN
+'-------------------------------------------------------------------------
+GetVars:
+'-------------------------------------------------------------------------
+IF INSTR(Ln$,":") = LEN(Ln$)-1 THEN Found% = 1 ELSE Found% = 0
+Ln$ = MID$(ReplaceChar$(Ln$,2),1)
+L$ = " " + UCASE$(Lin$) + " "
+L$ = ReplaceChar$(ReplaceChar$(L$,2),1)
+REPLACE CHR$(34) WITH " " IN L$
+WHILE LEN(Ln$) AND LEFT$(Ln$,1) <> "!" 'AND LEFT$(UCASE$(Ln$),3) <> "ASM"
+ParseWord$ = EXTRACT$(Ln$, S$)
+Ln$ = LTRIM$(MID$(Ln$,INSTR(Ln$,Parseword$)+LEN(Parseword$)+1))
+P$ = " " + UCASE$(ParseWord$) + " "
+FirstLetter$ = UCASE$(LEFT$(ParseWord$, 1))
+P1% = INSTR(ResWord$,P$)
+IF P1% AND Listing% THEN
+P2% = INSTR(L$,P$)
+Lin$ = LEFT$(Lin$, P2% - 1) + UCASE$(ParseWord$) + MID$(Lin$, P2%+  LEN(ParseWord$))
+IF P$= " ASM " THEN RETURN
+END IF
+VType% = 0 : IF NextWord% THEN VType% = NextWord% : NextWord% = 0
+IF P$ = " GOTO " OR P$ = " GOSUB " THEN NextWord% = 1
+IF P$ = " CALL " AND INSTR(L$, " INTERRUPT ") = 0 THEN
+NextWord% = 3
+END IF
+IF P$ = " SUB " THEN
+IF INSTR(L$, " END ") = 0 AND INSTR(L$," EXIT ") = 0 AND INSTR(L$," DATA ") = 0 THEN
+NextWord% = 3
+END IF
+END IF
+IF P$ = " FUNCTION " THEN
+IF INSTR(UCASE$(L$), " END ") = 0 AND INSTR(L$, " EXIT ") = 0 _
+AND INSTR(L$, " DATA ") = 0 THEN
+NextWord% = 4
+END IF
+END IF
+IF FirstLetter$ = "%" THEN VType% = 5
+IF LEFT$(P$, 3) = " FN" THEN VType% = 2
+IF Found% THEN VType% = 1 : Found% = 0
+IF P1% = 0 AND ((FirstLetter$ => "A" AND FirstLetter$ <="Z") _
+OR FirstLetter$ = "%")  THEN
+NewVar% = 1
+FOR c% = 1 TO TopVar%
+IF P$ = " "+ UCASE$(Var$(c%))+" " THEN  'known variable
+VarLoc$(c%) = VarLoc$(c%) + STR$(Lin%)
+IF VType% THEN VarType%(c%)=VType%
+NewVar% = 0
+P% = INSTR(L$, P$)
+Lin$ = LEFT$(Lin$, P% - 1) + Var$(c%) + MID$(Lin$, P%+ LEN(ParseWord$))
+EXIT FOR
+END IF
+NEXT
+IF NewVar% = 1 THEN ' new variable
+INCR TopVar%
+Var$(TopVar%) = ParseWord$
+VarLoc$(TopVar%) = STR$(Lin%)
+Vartype%(TopVar%)=Vtype%
+END IF
+END IF
+WEND
+RETURN
+'-------------------------------------------------------------------------
+SUB WriteVarFile SHARED
+'-------------------------------------------------------------------------
+PRINT : PRINT : PRINT " Cross reference file "; VarFile$
+PRINT " Sorting"; TopVar%; "variables": PRINT
+FOR i% = 1 TO TopVar%
+Var$(i%) = Var$(i%) + Z$ + VarLoc$(i%) + Z$ + STR$(VarType%(i%))
+NEXT
+ARRAY SORT Var$(1) FOR TopVar%, COLLATE UCASE
+FOR i% = 1 TO TopVar%
+VarType%(i%) = VAL(RIGHT$(Var$(i%), 1))
+Var$(i%) = LEFT$(Var$(i%), LEN(Var$(i%)) - 2)
+VarLoc$(i%) = MID$(Var$(i%), INSTR(Var$(i%), Z$) + 1)
+Var$(i%) = LEFT$(Var$(i%), INSTR(Var$(i%), Z$))
+NEXT
+LOCATE CSRLIN, 1: PRINT S$ + STRING$(40, CHR$(176));
+OPEN VarFile$ FOR OUTPUT AS #3
+FOR c% = 1 TO TopVar%  ' Find longest variable name
+IF LEN(Var$(c%)) > LongestVar% THEN LongestVar% = LEN(Var$(c%))
+NEXT
+Length% = 78 - (LongestVar% + 8)
+PRINT #3, STRING$(78, CHR$(61))
+PRINT #3, " PBXREF Cross reference list "; DATE$; S$; LEFT$(TIME$, 5)
+PRINT #3, " Sourcefile "; BasFile$; " Filesize"; BasFileLen&
+PRINT #3, STRING$(78, "-"): PRINT #3, TAB(2); "Type Name";
+PRINT #3, TAB(LongestVar% + 9); "Referenced lines": PRINT #3,
+FOR c% = 1 TO TopVar%
+'-- progress bar --------------------------------------------
+Percent% = INT(c% / TopVar% * 100)
+Percent$ = STRING$(INT(Percent% * .4), CHR$(219))
+LOCATE CSRLIN, 1: PRINT S$ + Percent$;
+LOCATE CSRLIN, 42: PRINT S$; RTRIM$(STR$(Percent%)); "%";
+'-----------------------------------------------------------
+PRINT #3, TAB(2);
+SELECT CASE VarType%(c%)
+CASE 0: PRINT #3, "Var";
+CASE 1: PRINT #3, "Lbl";
+CASE 2: PRINT #3, "Def";
+CASE 3: PRINT #3, "Sub";
+CASE 4: PRINT #3, "Fnc";
+CASE 5: PRINT #3, "Cst";
+END SELECT
+PRINT #3, TAB(7);
+PRINT #3, LEFT$(Var$(c%) + S$ + STRING$(LongestVar%, "."), (LongestVar%));
+WHILE LEN(VarLoc$(c%)) > Length%
+Sp% = Length%: VarLoc$(c%) = LTRIM$(VarLoc$(c%))
+WHILE MID$(VarLoc$(c%), Sp%, 1) <> S$ : DECR Sp% : WEND
+PRINT #3, TAB(LongestVar% + 9); LEFT$(VarLoc$(c%), Sp%)
+VarLoc$(c%) = RIGHT$(VarLoc$(c%), LEN(VarLoc$(c%)) - Sp%)
+WEND
+VarLoc$(c%)= LTRIM$(VarLoc$(c%))
+PRINT #3, TAB(LongestVar% + 9); VarLoc$(c%)
+NEXT
+PRINT #3, : PRINT #3, STRING$(78, "-")
+IF IncFile% = 0 THEN
+PRINT #3, " No include files in "; BasFile$
+ELSE
+FOR i% = 1 TO IncFile% : IF IncfileExist%(i%) THEN INCR e% : NEXT
+IF e% THEN
+PRINT #3, "Include files: ";
+FOR c% = 1 TO IncFile%
+IF IncFileExist%(c%) = 0 THEN INCR NotFound%
+IF IncFileExist%(c%) THEN
+PRINT #3, TAB(36); "["; LTRIM$(STR$(c%)); "] ";
+PRINT #3, IncFile$(c%)
+PRINT #3, TAB(36); "Starting with line number";IncFileStart%(c%)
+END IF
+NEXT
+END IF
+IF NotFound% THEN
+PRINT #3, "Include files not found: ";
+FOR c% = 1 TO IncFile%
+IF IncFileExist%(c%) = 0 THEN
+PRINT #3, TAB(37); "["; LTRIM$(STR$(c%)); "] ";
+PRINT #3, IncFile$(c%)
+END IF
+NEXT
+END IF
+END IF
+PRINT #3, STRING$(78, CHR$(61))
+END SUB
+'-------------------------------------------------------------------------
+SUB Setup SHARED
+'-------------------------------------------------------------------------
+Us$ = UCASE$(RTRIM$(COMMAND$))
+IF Us$ = "" THEN Syntax
+Z$ = CHR$(0) : S$ = CHR$(32)
+Vars% = 1000 '<----------- Do you need more?
+%False = 0 : %True = NOT %False
+LineNumber% = 1: CrossRef% = 1: Listing% = 1: Empty% = 0
+IF INSTR(Us$, "/N") THEN LineNumber% = 0
+IF INSTR(Us$, "/L") THEN CrossRef% = 0
+IF INSTR(Us$, "/C") THEN Listing% = 0
+IF INSTR(Us$, "/E") THEN Empty% = 1
+IF INSTR(Us$, "/") THEN Us$ = RTRIM$(LEFT$(Us$, INSTR(Us$, "/") - 1))
+DIM Var$(Vars%), VarLoc$(Vars%), VarType%(Vars%)
+DIM IncFile$(99), IncFileExist%(99),IncFileStart%(99)
+BasFile$=Us$
+IF INSTR(BasFile$,".STR") THEN
+PRINT "Error: Source file same as target file."
+PRINT "Rename ";Us$;" first."
+END
+END IF
+IF BasFile$ = "" THEN
+PRINT "Error: Missing sourcefile name"
+Syntax
+END IF
+COLOR 15,0 : CLS
+IF INSTR(Us$,".") = 0 THEN BasFile$  = Us$ + ".BAS"  'File #1 = source file
+IF INSTR(Us$, ".") THEN Us$ = MID$(Us$, 1, LEN(Us$) - 4)
+ListFile$ = Us$ + ".STR"  'File #2 = structured file
+VarFile$  = Us$ + ".VAR"  'File #3 = variable file
+END SUB
+'-------------------------------------------------------------------------
+SUB OpenFiles SHARED
+'-------------------------------------------------------------------------
+IF EXIST(BasFile$) = 0 THEN
+PRINT "Error: "; BasFile$; " not found"
+END: RETURN
+END IF
+OPEN BasFile$ FOR INPUT AS #1: BasFileLen& = LOF(1)
+WHILE NOT EOF(1)
+LINE INPUT #1, LL$
+IF LTRIM$(LL$)="" AND Empty% = 0 THEN DECR FileLin%
+INCR FileLin%
+WEND
+CLOSE #1
+OPEN BasFile$ FOR INPUT AS #1
+IF Listing% THEN OPEN ListFile$ FOR OUTPUT AS #2
+END SUB
+'-------------------------------------------------------------------------
+SUB ReadPBWords SHARED
+'-------------------------------------------------------------------------
+ResWord$ = S$
+DO
+READ PbWord$: ResWord$ = ResWord$ + PbWord$ + S$
+LOOP UNTIL PbWord$ = "ZZZ"
+END SUB
+'-----------------------------------------------------------------------
+FUNCTION PastSeconds& (StartTime$, EndTime$)
+'------------------------------------------------------------------------
+StartSec& = TimeToSeconds&(StartTime$)
+EndSec& = TimeToSeconds&(EndTime$)
+PastSeconds& = EndSec& - StartSec&
+END FUNCTION
+'------------------------------------------------------------------------
+FUNCTION EXIST (F$)
+'------------------------------------------------------------------------
+Fi$ = DIR$(F$)
+IF LEN(Fi$) THEN EXIST = 1 ELSE EXIST = 0
+END FUNCTION
+'-------------------------------------------------------------------------
+SUB Syntax
+'-------------------------------------------------------------------------
+PRINT STRING$(60, CHR$(61)): PRINT
+PRINT " Syntax: PBXREF Sourcefile[.bas] [/C | /L [/N /E]]"
+PRINT "         /C = Cross reference only (*.REF)"
+PRINT "         /L = Structured file listing only (*.STR)"
+PRINT "         /N = No line numbers in listing"
+PRINT "         /E = Empty lines as well"
+PRINT " Defaults: Cross reference, structured listing with"
+PRINT "           line numbers, no empty lines"
+PRINT : PRINT STRING$(60, CHR$(61)): END
+END SUB
+'-------------------------------------------------------------------------
+FUNCTION ReplaceChar$(Ln$, Ch%)
+'-------------------------------------------------------------------------
+SHARED S$
+IF Ch%= 1 THEN Chars$ = "=+-*/\^()[]{},;<>"
+IF Ch%= 2 THEN Chars$ = ":"
+FOR c% = 1 TO LEN(Chars$)
+REPLACE MID$(Chars$, c%, 1) WITH S$ IN Ln$
+NEXT
+Ln$ = Ln$ + " "
+ReplaceChar$ = Ln$
+END FUNCTION
+'------------------------------------------------------------------------
+FUNCTION TimeToSeconds& (Times$)
+'------------------------------------------------------------------------
+Hour& = VAL(LEFT$(Times$, 2))
+Mins% = VAL(MID$(Times$, 4, 2))
+Sec% = VAL(RIGHT$(Times$, 2))
+TimeToSeconds& = (Hour& * 3600) + (Mins% * 60) + Sec%
+END FUNCTION
+'------------------------------------------------------------------------
+SUB WaitKey 'For testing purpose
+'------------------------------------------------------------------------
+DO : A$ = INKEY$: LOOP UNTIL LEN(A$)
+END SUB
+'------------------------------------------------------------------------
+ErrorHandle:
+CLOSE : PRINT : PRINT
+PRINT " An error occured processing line";Lin% : PRINT Lin$
+e%= ERR
+SELECT CASE e%
+CASE 7  : e$ = "Out of memory"
+CASE 53 : e$ = "File not accessable"
+CASE 54 : e$ = "Bad file mode"
+CASE 61 : e$ = "Disk is full"
+CASE 62 : e$ = "Unexpected end of file"
+CASE 64 : e$ = "Bad file name"
+CASE 67 : e$ = "Too many files open"
+CASE 68 : e$ = "Device unavailable"
+CASE 71 : e$ = "Disk not ready"
+CASE 72 : e$ = "Disk media error"
+CASE 75 : e$ = "Bad path or file"
+CASE 76 : e$ = "Path not found"
+CASE 208: e$ = "Too many variables"
+CASE ELSE : e$ = " #" + STR$(e%)
+END SELECT
+PRINT " Error: ";e$
+END
+'=======================================================================
+' PowerBASIC 3.2 metastatements
+DATA $ALIAS,$CODE,$COM,$COM1,$COM2,$COMPILE,$CPU,$DEBUG,$DIM
+DATA $DYNAMIC,$ELSE,$ENDIF,$ERROR,$EVENT,$FLOAT,$HUGE,$IF
+DATA $INCLUDE,$INLINE,$LIB,$LINK,$LIST,$OPTIMIZE,$OPTION,$SEGMENT
+DATA $SOUND,$STACK,$STATIC,$STRING
+' PowerBASIC 3.2 commands
+DATA ABS,ABSOLUTE,ACCESS,ALIAS,ALL,AND,ANY,APPEND,ARRAY,AUTODIM
+DATA AS,ASC,ASCEND,ASCII,ASM,AT,ATN,ATTRIB,BASE,BCD,BEEP,BIN$
+DATA BINARY,BIT,BITS,BLOAD,BSAVE,BYTE,BYVAL,CALL,CASE
+DATA CBCD,CBYT,CCUR,CDBL,CDWD,CEIL,CEXT,CFIX,CHAIN,CHDIR,CHDRIVE
+DATA CHR$,CINT,CIRCLE,CLEAR,CLNG,CLOSE,CLS,CODEPTR
+DATA CODESEG,COLLATE,COLOR,COM,COMMAND$,COMMON,CNTLBREAK
+DATA COS,CQUD,CSNG,CSRLIN,CURDIR$,CVB,CVBYT,CVD,CGA
+DATA CVDWD,CVE,CVF,CVI,CVL,CVMD,CVMS,CVQ,CVS,CVWRD,CWRD
+DATA DATA,DATE$,DECLARE,DECR,DEF,DEFBCD,DEFBYT,DEFCUR,DEFDBL
+DATA DEFDWD,DEFEXT,DEFFIX,DEFFLX,DEFINT,DEFLNG,DEFQUD,DEFSNG
+DATA DEFSTR,DEFWRD,DELAY,DELETE,DESCEND
+DATA DIM,DIR$,DO,DOUBLE,DRAW,DWORD,DYNAMIC,ELSE,ELSEIF,EMS,END
+DATA ENDMEM,ENVIRON,ENVIRON$,EOF,EQV,ERADR,EGA,EMULATE
+DATA ERASE,ERDEV,ERDEV$,ERL,ERR,ERROR,ERRTEST,EVENT,EXE,EXECUTE
+DATA EXIT,EXP,EXP10,EXP2,EXTERNAL,EXTRACT$,FAR,FIELD,FILEATTR,FILES,FIX
+DATA FIXDIGITS,FLEXCHR$,FLUSH,FN,FOR,FRAC,FRE,FREEFILE,FROM,FULLFLOAT
+DATA FUNCTION,GET,GET$,GO,GOSUB,GOTO,GRAPH,HEX$,HUGE,HERC
+DATA IF,IMP,IN,INCR,INKEY$,INLINE,INP,INPUT,INPUT$,IPRINT
+DATA INSERT,INSTAT,INSTR,INT,INTEGER,INTERRUPT
+DATA IOCTL$,IS,ISFALSE,ISTRUE,ITERATE,KEY
+DATA KILL,LCASE$,LEFT,LEFT$,LEN,LET,LINE,LOC,LOCAL,LOCATE,LOCK,LOF
+DATA LOG,LOG10,LOG2,LONG,LOOP,LPOS,LPRINT,LSET,LTRIM$,MAP,MAX,LPT
+DATA MEMPACK,MEMSET,MID$,MIN,MKB$,MKBYT$,MKD$
+DATA MKDIR,MKDWD$,MKE$,MKF$,MKI$,MKL$,MKMD$,MKMS$,MKQ$
+DATA MKS$,MKWRD$,MOD,MTIMER,MULTIPLEX,NAME,NEXT,NOT,NONE,NPX,OCT$,OFF
+DATA ON,OPEN,OPTION,OR,OUT,OUTPUT,PAINT,PALETTE,PROCEDURE
+DATA PEEK,PEEK$,PEEKI,PEEKL,PEN,PLAY,PMAP,POINT,POKE,POKE$,POKEI
+DATA POKEL,POPUP,POS,PRESET,PRINT,PRIVATE,PSET,PTR,PUBLIC
+DATA PUT,PUT$,QUIET,RANDOM,RANDOMIZE,READ,REDIM,REG,REM
+DATA REMOVE,REPEAT,REPLACE,RESET,RESTORE,RESUME,RETURN,RIGHT,RIGHT$
+DATA RMDIR,RND,ROTATE,ROUND,RSET,RTRIM$,RUN,SAVE,SCAN,SCREEN,SEEK,SET
+DATA SEG,SELECT,SETMEM,SGN,SHARED,SHELL,SHIFT,SIN,SINGLE,SIZE,SPEED,SIGNED
+DATA SLEEP,SORT,SOUND,SPACE$,SPC,SQR,STATIC,STEP,STICK,STOP,STR$,STRIG
+DATA STRING,STRING$,STRPTR,STRSEG,STUFF,SUB,SWAP,SYSTEM,TAB,TAGARRAY
+DATA TALLY,TAN,TOGGLE,TEXT,THEN,TIME$,TIMER,TO,TROFF,TRON,TYPE
+DATA UBOUND,UCASE$,UEVENT,UNION,UNIT,UNLOCK,UNTIL,USING,USING$,USR
+DATA VAL,VARPTR,VARPTR,VARSEG,VERIFY,VGA,VIEW,WAIT
+DATA WEND,WHILE,WIDTH,WINDOW,WITH,WORD,WRITE,XOR
+' PowerBASIC 3.2 internal variables
+DATA PBVBINBASE,PBVCPU,PBVCURSOR1,PBVCURSOR2,PBVCURSORVIS
+DATA PBVDEFSEG,PBVERR,PBVFIXDIGITS,PBVFLEXCHR,PBVHOST,PBVMINUSONE
+DATA PBVNPX,PBVONE,PBVREVISION,PBVREVLTR,PBVSCRNAPAGE,PBVSCRNBUFF
+DATA PBVSCRNCARD,PBVSCRNCOLS,PBVSCRNMODE,PBVSCRNPXLATTR
+DATA PBVSCRNROWS,PBVSCRNTXTATTR,PBVSCRNVPAGE,PBVSWITCH
+DATA PBVUSERAREA,PBVUSINGCHRS,PBVVTXTX1,PBVVTXTX2,PBVVTXTY1
+DATA PBVVTXTY2,PBVZERO,ZZZ
+'"ZZZ" is end mark, do not change
+'=== eof ===================================================================
+ã

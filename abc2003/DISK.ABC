@@ -1,0 +1,444 @@
+Mikerinos Altermann            Detect CD-ROM Drives           mikerinos@excite.com           03-16-03 (  :  )       QB, PDS                1    1515     CDLIST.BAS  'CDROM List program utility
+'detect and list all CDROM drives existing in your system
+'CD units emulated using special programs are also discovered
+'works with MS-DOS 6.22 and Windows 3.x/95/98/Me/XP
+'not tested for other systems, but it's possible to work
+'if you find any bugs or problems,or have any suggestions to make
+'please let me know
+'Mikerinos Altermann
+'CONTACT e-mail adress mikerinos@excite.com
+
+'You must start environment using QB /l command
+
+DECLARE SUB cdromlist (nrdrv%, cdlist$)
+TYPE RegType
+  AX    AS INTEGER
+  BX    AS INTEGER
+  CX    AS INTEGER
+  DX    AS INTEGER
+  BP    AS INTEGER
+  SI    AS INTEGER
+  DI    AS INTEGER
+  flags AS INTEGER
+  DS    AS INTEGER
+  ES    AS INTEGER
+END TYPE
+
+DIM SHARED REGISTERS AS RegType
+
+CLS
+PRINT
+cdromlist nrdrv%, cdlist$
+IF nrdrv% > 0 THEN
+PRINT nrdrv%; "CDROM drives detected"
+FOR i% = 1 TO nrdrv%
+PRINT TAB(4); MID$(cdlist$, i%, 1) + ":"
+NEXT
+ELSE
+PRINT "No CDROM found"
+END IF
+PRINT
+END
+
+SUB cdromlist (nrdrv%, cdlist$)
+REGISTERS.AX = &H1500
+REGISTERS.BX = 0
+CALL INTERRUPTX(&H2F, REGISTERS, REGISTERS)
+IF REGISTERS.BX <> 0 THEN
+nrdrv% = REGISTERS.BX
+REDIM a%(1 TO REGISTERS.BX \ 2 + 1)
+REGISTERS.AX = &H150D
+REGISTERS.ES = VARSEG(a%(1))
+REGISTERS.BX = VARPTR(a%(1))
+CALL INTERRUPTX(&H2F, REGISTERS, REGISTERS)
+cdlist$ = SPACE$(nrdrv%)
+FOR i% = 1 TO nrdrv%
+IF i% \ 2 = i% / 2 THEN
+MID$(cdlist$, i%, 1) = CHR$((a%(i% \ 2) \ 256) + 65)
+ELSE
+MID$(cdlist$, i%, 1) = CHR$((a%(i% \ 2 + 1) MOD 256) + 65)
+END IF
+NEXT
+END IF
+cdlist$ = RTRIM$(cdlist$)
+END SUB
+
+
+„Dieter Folger                  Search for Files               ba2049@bnv-bamberg.de          06-11-03 (  :  )       PB                     1    10037    Pbsearch.bas '----------------------------------------------
+ ' PBSEARCH.BAS is a utility for text search
+ ' in one or more files with many options.
+ ' Converted to PowerBasic by Dieter Folger
+ ' Adapted from a QuickBasic program by an
+ ' unnamed author.
+ '----------------------------------------------
+ $STACK 32766
+ $LIB ALL OFF
+ DEFINT A-Z
+
+ %FALSE = 0
+ %TRUE = NOT %FALSE
+ %MaxExcl = 10
+
+ DIM Buff$(100): DIM p$(100)
+ DIM Excl$(%MaxExcl)
+
+ ' Set default options
+ Root = %FALSE
+ Subdirs = %FALSE
+ IgnoreCase = %TRUE
+ ExclCount = 0
+ Pause = %TRUE
+ MatchCount = 0
+ ON ERROR RESUME NEXT
+ '**********************
+ ' Program starts here
+ '**********************
+ OrigDir$ = CurDir$
+ GetParms
+ IF IgnoreCase THEN
+    SearchText$ = UCASE$(SearchText$)
+ END IF
+ IF Root THEN
+    Path$ = LEFT$(OrigDir$,3)
+ ELSE
+    Path$ = OrigDir$ +"\"
+ END IF
+ OPEN "report.lst" for output AS #1
+ FindFile Path$, FileSpec$
+ Finish
+ COLOR 7,0
+ END
+ '**********************
+ '  Get information from
+ '  the user
+ '**********************
+ SUB GetParms PUBLIC SHARED
+    COLOR 15,0 : CLS
+    LOCATE 1,1
+    PRINT "File(s) to search:"
+    PRINT "(You may use wildcards)"
+    LOCATE 4,1
+    PRINT "Text to find:"
+    LOCATE 1,19: LINE INPUT " --> ", FileSpec$
+
+    IF LEN(FileSpec$) = 0 THEN END
+    IF INSTR(FileSpec$, ".") = 0 THEN
+       FileSpec$ = FileSpec$ + ".*"
+    END IF
+
+    LOCATE 4,15
+    LINE INPUT " --> ", SearchText$
+    IF LEN(SearchText$) = 0 THEN END
+
+    LOCATE 7, 1
+    PRINT "Enter number of option you want to change."
+    PRINT "Press <RETURN> when you are done or <ESC> to end program"
+    PRINT
+    PRINT
+    PRINT "       1. Include subdirectories in the search"
+    PRINT "       2. Start search in root directory"
+    PRINT "       3. Ignore case while searching"
+    PRINT "       4. Exclude .EXE and .COM files from the search"
+    PRINT "       5. Exclude other files from the search"
+    PRINT "       6. Pause to display each match found"
+    DO
+       LOCATE 11, 3
+       IF Subdirs THEN PRINT "=>";  ELSE PRINT "  ";
+       LOCATE 12, 3
+       IF Root THEN PRINT "=>";  ELSE PRINT "  ";
+       LOCATE 13, 3
+       IF IgnoreCase THEN PRINT "=>";  ELSE PRINT "  ";
+       LOCATE 14, 3
+       IF Excluded("EXE") AND Excluded("COM") THEN PRINT "=>";  ELSE PRINT "  ";
+       LOCATE 16, 3
+       IF Pause THEN PRINT "=>";  ELSE PRINT "  ";
+
+       LOCATE 18, 1 : PRINT "Excluded files: ";
+       PRINT STRING$(%MaxExcl * 6, " ");
+       LOCATE 18, 17
+       FOR Lp = 1 TO ExclCount
+          PRINT "*."; Excl$(Lp); " ";
+       NEXT Lp
+
+       DO
+          Char$ = INPUT$(1)
+       LOOP UNTIL INSTR(CHR$(13) + CHR$(27) + "123456", Char$)
+       SELECT CASE Char$
+          CASE "1"
+          Subdirs = Subdirs XOR %TRUE
+          CASE "2"
+          Root = Root XOR %TRUE
+          IF Root THEN
+             Subdirs = %TRUE
+          END IF
+          CASE "3"
+          IgnoreCase = IgnoreCase XOR %TRUE
+          CASE "4"
+          IF Excluded("EXE") THEN
+             DelExclude ("EXE")
+             DelExclude ("COM")
+          ELSE
+             IF ExclCount + 2 <= %MaxExcl THEN
+                AddExclude ("EXE")
+                AddExclude ("COM")
+             ELSE
+                Temp$ = Prompt$("Excluded file list is full")
+             END IF
+          END IF
+          CASE "5"
+          FileExt$ = Prompt$("Enter file extension to add or remove from the list")
+          FileExt$ = LTRIM$(RTRIM$(UCASE$(FileExt$)))
+          WHILE INSTR(FileExt$, ".")
+             FileExt$ = MID$(FileExt$, INSTR(FileExt$, ".") + 1)
+          WEND
+          IF LEN(FileExt$) > 0 AND LEN(FileExt$) <= 3 THEN
+             IF Excluded(FileExt$) THEN
+                DelExclude (FileExt$)
+             ELSE
+                IF ExclCount < %MaxExcl THEN
+                   AddExclude (FileExt$)
+                ELSE
+                   FileExt$ = Prompt$("Excluded file list is full")
+                END IF
+             END IF
+          END IF
+          CASE "6" : Pause = Pause XOR %TRUE
+          CASE CHR$(27) : END
+          CASE ELSE
+       END SELECT
+    LOOP UNTIL Char$ = CHR$(13)
+    CLS
+ END SUB
+
+ FUNCTION Prompt$ (Text$) PUBLIC SHARED
+    OrigLine = CSRLIN
+    OrigPosn = POS(0)
+    LOCATE 23, 1
+    PRINT Text$;
+    LINE INPUT " ==> ", Temp$
+    LOCATE 23, 1
+    FOR Lp = 1 TO LEN(Text$) + LEN(Temp$) + 5
+       PRINT " ";
+    NEXT Lp
+    LOCATE OrigLine, OrigPosn
+    Prompt$ = Temp$
+ END FUNCTION
+ '**********************
+ '  Maintain list of
+ '  excluded files
+ '**********************
+ SUB AddExclude (Ext$) PUBLIC SHARED
+    IF Excluded(Ext$) = %FALSE AND ExclCount < %MaxExcl THEN
+       INCR ExclCount
+       Excl$(ExclCount) = Ext$
+    END IF
+ END SUB
+
+ SUB DelExclude (Ext$) PUBLIC SHARED
+    Found = %FALSE
+    FOR Lp = 1 TO ExclCount
+       IF Excl$(Lp) = Ext$ THEN
+          Found = %TRUE
+          FOR lp2 = Lp TO ExclCount - 1
+             Excl$(lp2) = Excl$(lp2 + 1)
+          NEXT lp2
+       END IF
+    NEXT Lp
+    IF Found THEN
+       ExclCount = ExclCount - 1
+    END IF
+ END SUB
+
+ FUNCTION Excluded (Ext$) PUBLIC SHARED
+    FOR Lp = 1 TO ExclCount
+       IF Excl$(Lp) = Ext$ THEN
+          Excluded = %TRUE
+          EXIT FUNCTION
+       END IF
+    NEXT Lp
+    Excluded = %FALSE
+ END FUNCTION
+ '**********************
+ '  Find files to search
+ '**********************
+ '---------------------------------------------
+ SUB FindFile (Path$, FileSpec$) PUBLIC SHARED
+ '---------------------------------------------
+  Again:
+    SaveDta
+    f$ = DIR$ (Path$ + FileSpec$, 7)
+    WHILE LEN (f$)
+       SearchFile Path$ + F$
+       f$ = DIR$
+    WEND
+    d$ = DIR$ (Path$ + "*.*", 55)
+    INCR d: p$(d) = Path$
+    DO
+       IF LEN (d$) AND (Attr% AND 16) = 16 THEN
+          Path$ = RTRIM$(Path$,"\") + "\" + d$ + "\"
+          GOTO Again
+       END IF
+       d$ = DIR$
+       IF d$ = "" THEN
+          DECR d
+          Path$ = p$ (d)
+          RestoreDta
+       END IF
+    LOOP UNTIL d = 0
+ END SUB
+ '----------------------------------
+ SUB GetDTA PUBLIC SHARED
+ '----------------------------------
+  REG 1, &H2F00: CALL INTERRUPT &H21
+  DtaSeg& = REG(9): DtaOfs& = REG(2)
+ END SUB
+ '----------------------------------
+ FUNCTION Attr% PUBLIC SHARED
+ '----------------------------------
+  GetDta
+  DEF SEG = DtaSeg&
+  Attr% = PEEK(DtaOfs& + 21)
+  DEF SEG
+ END FUNCTION
+ '----------------------------------------
+ SUB SaveDta PUBLIC SHARED
+ '----------------------------------------
+  GetDta
+  DEF SEG = DtaSeg&
+  Buff$(d) = PEEK$(DtaOfs&, 21)
+  DEF SEG
+ END SUB
+ '---------------------------------------
+ SUB RestoreDta PUBLIC SHARED
+ '---------------------------------------
+  GetDta
+  DEF SEG = DtaSeg&
+  POKE$ DtaOfs&, Buff$(d)
+  DEF SEG
+ END SUB
+ '**********************
+ ' Search a file for text
+ ' These routines make no
+ ' assumptions about the
+ ' file format
+ '**********************
+ SUB SearchFile (File$) PUBLIC SHARED
+    BufLen = 8192
+    MatchFlag = 0
+    FOR Lp = 1 TO ExclCount
+       IF INSTR(File$, "." + Excl$(Lp)) THEN
+          EXIT SUB
+       END IF
+    NEXT Lp
+    CLS : PRINT "Searching "; File$
+    FileNum = FREEFILE
+    OPEN File$ FOR BINARY AS FileNum
+    INCR FilesSearched
+    FileLen& = LOF(FileNum)
+    FilePosn& = 1
+    KeepLen = LEN(SearchText$) - 1
+    FileBuf$ = STRING$(BufLen, 0)
+    MatchFlag = %FALSE
+    DO WHILE FilePosn& < FileLen&
+       SEEK FileNum, FilePosn&
+       GET$ FileNum, BufLen, FileBuf$
+       IF IgnoreCase THEN
+          FileBuf$ = UCASE$(FileBuf$)
+       END IF
+       Posn = INSTR(FileBuf$, SearchText$)
+       IF Posn THEN
+          IF MatchFlag THEN
+          ELSE
+             MatchFlag = %TRUE
+             INCR MatchCount
+             Temp$ = File$
+          END IF
+          INCR MatchEntry
+          CLS
+          PRINT "Found in "; File$; " at byte"; FilePosn& + Posn - 1
+          PRINT #1 ,"Found in ";FILE$;" at byte"; Fileposn& + Posn - 1
+          IF Pause THEN
+             Display FileNum, FilePosn& + Posn - 1, FileLen&
+             COLOR 15, 1
+             PRINT " (C)ontinue  (N)ext File  (E)nd "
+             DO
+               Char$ = UCASE$(INPUT$(1))
+               IF Char$ = CHR$(13) THEN Char$ = "C"
+             LOOP UNTIL INSTR("CNE", Char$)
+             COLOR 15, 0
+             IF Char$ = "E" THEN
+                Finish
+             ELSEIF Char$ = "N" THEN
+                CLOSE FileNum
+                EXIT SUB
+             END IF
+          END IF
+          FilePosn& = FilePosn& + Posn + KeepLen
+       ELSE
+          FilePosn& = FilePosn& + BufLen - KeepLen
+       END IF
+    LOOP
+    CLOSE FileNum
+ END SUB
+
+ SUB Display (FileNum, DisplayPosn&, FileLen&) PUBLIC SHARED
+    Prefix& = DisplayPosn& - 1
+    IF Prefix& > 200 THEN Prefix& = 200
+    IF Prefix& THEN
+       Disp$ = STRING$(Prefix&, 32)
+       StartPosn& = DisplayPosn& - Prefix&
+       SEEK FileNum, StartPosn&
+       GET FileNum, , Disp$
+       NicePrint Disp$
+    ELSE
+       SEEK FileNum, 1
+    END IF
+
+    COLOR 15, 1
+    Disp$ = SearchText$
+    GET FileNum, , Disp$
+    NicePrint Disp$
+    COLOR 15, 0
+
+    Suffix& = FileLen& - SEEK(FileNum) + 1
+    IF Suffix& > 200 THEN Suffix& = 200
+    IF Suffix& THEN
+       Disp$ = STRING$(Suffix&, 32)
+       GET FileNum, , Disp$
+       NicePrint Disp$
+    END IF
+    NicePrint CHR$(13)
+ END SUB
+
+ SUB NicePrint (Text$) PUBLIC SHARED
+    PrntPosn = 1
+    DO
+       Char$ = MID$(Text$, PrntPosn, 1)
+       IF Char$ => " " OR Char$ = CHR$(9) THEN
+          PRINT Char$;
+          INCR PrntPosn
+       ELSEIF Char$ = CHR$(13) OR Char$ = CHR$(10) THEN
+          PRINT
+          INCR PrntPosn
+          DO WHILE MID$(Text$, PrntPosn, 1) = CHR$(13) OR MID$(Text$, PrntPosn, 1) = CHR$(10)
+             INCR PrntPosn
+          LOOP
+       ELSE
+          PRINT ".";
+          INCR PrntPosn
+       END IF
+    LOOP UNTIL PrntPosn > LEN(Text$)
+ END SUB
+ '**********************
+ ' Report final statistics
+ '**********************
+ SUB Finish PUBLIC SHARED
+    PRINT SearchText$; " found in"; MatchCount; "of"; FilesSearched; "files"
+    PRINT "See REPORT.LST for details"
+    CLOSE
+    IF Root THEN
+       CHDIR OrigDir$
+    END IF
+ END SUB
+
+„Tony Damigo                    Remove Directories from Floppy tldamigo@ccis.com              10-19-03 (  :  )       PB                     257  6689     CLEAN.BAS   '===========================================================================„' Subject: DRIVE/DIRECTORY CLEANER            Date: 07-21-03 (10:58)„'  Author: Tony Damigo                        Code: PB„'  Origin: tldamigo@ccis.com                Packet: PB.ABC„'„'  Released to Public Domain„'  Created using PowerBasic Ver 3.5„'===========================================================================„„'„' I'm not very good at writing code, so please forgive my bad„' habbits.„'„' I do a lot of floppy work and hate trying to delete my disks„' one directory at a time. With that in mind, I created this little„' program to assist me.„'„' You are free to use it as you wish - but please give credit where due.„'„' ************************ [ WARNING ] **************************„'„' !! DO NOT TEST ON YOUR HARD DRIVE UNLESS YOU WANT IT DELETED !!„'„' ***************************************************************„'„' Note - Your program is responsible for including a back-slash„' the in the path. Failure to do so may cause an endless loop.„'„' Example: Path$="D:\TEST\STANDARDS\"„'„' If path includes a list of directories - only the last directory,„' right end of path string, and all its branches will be deleted.„'„' Example: Path$="D:\A1\B1\C1\" <-- cleaning will start at C1\„'          and progress down the branch to D1\E1\F1\ etc.,„'          much like the Windows(tm) program deletes directories„'„' Try changing the directory path to see how it works. But I suggest„' you practice on a floppy disk drive. Not your dard drive.„'„' As emplimented here, no wildcards are allowed.„'„' NO ERROR CHECKING is done regarding non-valid drives or„' directorins. I leave that to your code :-)„'-------------------------------------------------------------„„„CLEAR„CLS„DEFINT A-Z„SHARED Drive%, Orgbb&&„„RESET.CLEAN:„„Drive%  =0„Orgbb&& =0„„PATH$=Command$„IF PATH$="" THEN PATH$="A:\"   '--- Assums A: Drive to be on the safe side.„IF LEN(PATH$)=1 THEN PATH$=PATH$+":\"„IF LEN(PATH$)=2 THEN PATH$=PATH$+"\"„„„ORGPATH$=PATH$„'----------- Save Original Path„„Drive%=Instr("ABCDEFGHIJKLMNOPQRSTUVWXYZ",LEFT$(ORGPATH$,1))„'----------- Assign number value to drive letter„„RETEST:„„IF DRIVESPACE&&(drive%) = 0 THEN„   LOCATE 3,1„   PRINT "No Disk in Drive ..."„   PRINT "Incert disk and hit any kay to continue"„   PRINT "Press ESC to end task now!"„   BEEP„   Action=Getkey%„   IF Action= 27 THEN„      CLS„      END„   END IF„   LOCATE 3,1„   PRINT STRING$(40," ")„   PRINT STRING$(40," ")„   PRINT STRING$(40," ")„   GOTO RESET.CLEAN„END IF„„' ----------„„Orgbb&&=FREESPACE&&(drive%)„'----------- Remember Original value of free space„„CALL PRINTSpecs„' ---------- Print Drive Info on screen„„„„' -------------------[ Start the main loop ]---------------------„„  Temp$=Path.2.Delete$( PATH$ )„„  DO WHILE Temp$<>OrgPath$„     CALL PRINTSpecs„     IF Del.Directory ( Temp$ )=0 THEN„       Temp$=Path.2.Delete$( PATH$ )„     END IF„  LOOP„„  Del.Directory ( Temp$ )„  temp$=Path.2.Delete$( Path$ )„  Del.Directory ( Temp$ )„  CALL PRINTSpecs„  BEEP„„  LOCATE 13,23 :  PRINT "Please Incert Another Floppy Disk"„  LOCATE 14,20 :  PRINT "Press any key to continue, or Esc to End"„„ DO„   Action=Getkey%„   IF Action=27 THEN„      CLS„      END„   ELSE„„      LOCATE 13,23 :  PRINT STRING$(45," ")„      LOCATE 14,20 :  PRINT STRING$(45," ")„   END IF„„   GOTO RESET.CLEAN:„LOOP„END„„'---------------------------------------------------------------„„„FUNCTION Del.Directory ( Fmask$ )„'---------------------------------------------------------------„' Deletes all files in the directory indicated in Fmask$„' - also looks for read only files and changes to normal„' If no files are present it deletes the directior„'---------------------------------------------------------------„ON LOCAL ERROR GOTO DDTRAP„MASK$=FMASK$„ IF DirIsEmpty (Mask$)=0 THEN„„    RMDIR RTRIM$(Mask$,"\")„    CALL PRINTSpecs„ ELSE„    File$=DIR$(Mask$+"*.*",16)„    WHILE File$<>""„      X= ATTRIB( Mask$+File$ )„      IF X <> 16 THEN„         IF X <> 0 THEN„            ATTRIB Mask$+File$, 0„            KILL Mask$+File$„         END IF„      END IF„      File$=DIR$„„      CALL PRINTSpecs„„    WEND„ END IF„   FUNCTION=1„„ EXIT FUNCTION„ DDTRAP:„   RESUME DDEXIT„ DDEXIT:„   FUNCTION=0„END FUNCTION„„FUNCTION Path.2.Delete$( FMask$ )„'---------------------------------------------------------------„' FMask$ is the starting point for the File Path. It will search„' a single path to it's end, but it will only fallow 1 brach of„' that path.„'---------------------------------------------------------------„  Result$=""„  Org$=FMask$„  Mask$=FMask$„  CheckNext:„„  File$ = DIR$ ( Mask$+"*",16 )„„  DO WHILE FILE$ <> ""„    Result$ = Result$+File$+"\"„    File$   = Dir$„    Mask$=Org$+Result$„    GOTO CheckNext ' ----------------- ' re-start search until all„  LOOP                                 ' dir's are found along path„  FUNCTION=Mask$                       ' then exit loop„  EXIT FUNCTION„„END FUNCTION„„„FUNCTION DirIsEmpty( FMask$ )„' --------------------------------------------„' Duh! Checks to see if directory is empty„' --------------------------------------------„  IF dir$(FMask$+"*.*",6) > "" THEN„     FUNCTION=1„  ELSE„     FUNCTION=0„  END IF„END FUNCTION„„FUNCTION FREESPACE&& ( Drive%)   '-------- Find Free Space„ REG 4,Drive%„ REG 1,&H3600„ CALL INTERRUPT &H21„ FUNCTION= CQUD(REG(2)) * REG(3) * REG(1)„END FUNCTION„„„FUNCTION DRIVESPACE&& ( Drive% ) '-------- Get Disk Capacity„ REG 4,Drive%„ REG 1,&H1C00„ CALL INTERRUPT &H21„ FUNCTION= CQUD(REG(4)) * REG(3) * REG(1)„END FUNCTION„„Sub PRINTSpecs„ SHARED Drive%,Orgbb&&,Reclaimed&&„  aa&&=DRIVESPACE&& ( Drive% )„  bb&&=FREESPACE&&( Drive% )„„  IF Reclaimed&& =0 THEN Reclaimed&&=bb&&„  LOCATE 1,2 : PRINT "Clean Disk Ver 01"„  LOCATE 4,2 : PRINT USING "Total Disk Capacity   : ############# ";aa&&„  LOCATE 5,2 : PRINT USING "Available Free Space  : ############# ";bb&&„  LOCATE 6,2 : PRINT USING "Reclaimed File Space  : ############# ";(bb&&-Reclaimed&&)„„'----------------------------------------------------------------„' This is used to display info during full delete„„  SVal& = (clng(bb&&) / clng(aa&&)) * 99.5„  LOCATE 7,2 : PRINT USING "Task ###";SVal&;„  PRINT "% Compleated"„' ------------------------------------------------„End Sub„„FUNCTION GETKEY%„' semple key input„„  ky$=""„  DO WHILE ky$=""„     ky$=UCASE$(inkey$)„  LOOP„  FUNCTION=ASCII(ky$)„END FUNCTION„„„„
