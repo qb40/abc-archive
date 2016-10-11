@@ -1,0 +1,357 @@
+ÚÄÄÄ Ä úú ú                                        ÚÄÄ Ä úú ú
+  The Official ABC Express Reader Version 1.8        Accept no substitutes!
+                                    ú úú Ä ÄÄÄÙ                    ú úú Ä ÄÄÙ
+                                           Released v1.8  July 22, 1998
+ÚÄÄÄÄÄÄ¿ ÚÄ¿    ÚÄ¿                      ÚÄÄÄ Ä úú ú
+³°ÚÄÄ¿°³ ³°³    ³°³                        The All BASIC Code (ABC) Archives
+³±ÀÄÄÙ±³ ³±³    ³±³                        can be found at various sites and
+³²ÚÄÄ¿²³ ³²³    ³²³                        distribution packages.
+³Û³  ³Û³ ³ÛÀÄÄ¿ ³ÛÀÄÄ¿                     PLEASE NOTE, The All BASIC Code
+ÀÄÙ  ÀÄÙ ÀÄÄÄÄÙ ÀÄÄÄÄÙ                     Reader v1.10 (Express v1.8) and
+ÚÄÄÄÄÄÄ¿ ÚÄÄÄÄÄÄ¿ ÚÄÄÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄÄÄ¿    bi-monthly packets CANNOT be
+À¿°ÚÄ¿°³ ³°ÚÄÄ¿°³ ³°ÚÄÄÄÙ À¿°ÚÙ ³°ÚÄ¿°³    included in commercial programs or
+ ³±ÀÄÙ±³ ³±ÀÄÄÙ±³ ³±ÀÄÄÄ¿  ³±³  ³±³ ÀÄÙ    sold as is or modified in ANY way
+ ³²ÚÄ¿²³ ³²ÚÄÄ¿²³ ÀÄÄÄ¿²³  ³²³  ³²³ ÚÄ¿    for the benefit of the person
+ÚÙÛÀÄÙÛ³ ³Û³  ³Û³ ÚÄÄÄÙÛ³ ÚÙÛÀ¿ ³ÛÀÄÙÛ³    or people involved.
+ÀÄÄÄÄÄÄÙ ÀÄÙ  ÀÄÙ ÀÄÄÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÄÄÙ    NO CHARGE OF ANY KIND IS PERMITTED
+ÚÄÄÄÄÄ¿ ÚÄÄÄÄÄÄ¿ ÚÄÄÄÄÄÄ¿ ÚÄÄÄÄÄ¿          FOR THIS WORK!  AND AS SUCH, THERE
+³°ÚÄ¿°³ ³°ÚÄÄ¿°³ À¿°ÚÄ¿°³ ³°ÚÄÄÄÙ          IS NO WARRANTY EITHER EXPRESSED
+³±³ ÀÄÙ ³±³  ³±³  ³±³ ³±³ ³±ÀÄ¿            OR IMPLIED.
+³²³ ÚÄ¿ ³²³  ³²³  ³²³ ³²³ ³²ÚÄÙ            USE AT YOUR OWN DISCRETION!
+³ÛÀÄÙÛ³ ³ÛÀÄÄÙÛ³ ÚÙÛÀÄÙÛ³ ³ÛÀÄÄÄ¿                                  ú úú Ä ÄÄÄÙ
+ÀÄÄÄÄÄÙ ÀÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÙ ÀÄÄÄÄÄÙ
+
+OFFICIAL DISTRIBUTORS (Subject to change without notice)
+
+  ON THE INTERNET:
+       -  http://charlie.simplenet.com/abc/abchome.html
+       -  http://www.xs4all.nl/~excel/pbabc.html
+       -  http://www.cvnet.co.uk/o.cook/abc/
+       -  http://www.freenet.edmonton.ab.ca/~voxel/
+       -  http://www.simtel.net/simtel.net/msdos/basic.html
+           ftp://ftp.simtel.net/pub/simtelnet/msdos/basic
+
+ NOTICE:  This document is outdated, some information may be incorrect.
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³ The ALL BASIC CODE (ABC) Reader v1.10 and Express v1.8 (c)1998 William Yu ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+ Please accept no substitutes.  These are the OFFICIAL ABC Reader's and are
+ not to be modified or duplicated for the purpose of violating the provisions
+ of the copyright act.  They are supplied AS IS, with NO WARRANTY either
+ expressed or implied.  SUPPORT for operating the reader is limited.  Those
+ who have e-mail addresses can e-mail me at: voxel@freenet.edmonton.ab.ca
+ If you have bug reports, or future ideas/suggestions, then please e-mail me.
+ NOTE: I reserve the right to discontinue the distribution of The ABC
+       (Express) Reader and bi-monthly packets without any prior notice.
+       The ABC Reader v1.10 is no longer being supported, please do not
+       contact me with error reports or upgrade status.
+
+*** LEGAL JARGON ***
+
+     "The ABC Express Reader is supplied as is.  The author disclaims
+      all warranties, expressed or implied, and assumes NO liability
+      for damages, direct or consequential, which may result from the
+      use of The ABC Express Reader."
+
+      The author(s) do(es) NOT claim responsibility nor the accuracy of
+      their source codes contained in the ABC Packets.  Please use and
+      modify at your own discretion.
+
+      UNLESS OTHERWISE STATED in the source code, all snippets contained
+      herein are considered to be PUBLIC DOMAIN.  Any copyrighted material
+      contained in the ABC Packets is distributed with the permission of
+      the original author.  Selling their program/code, or using the code
+      in one of your programs other than for personal uses, is illegal
+      without prior written consent.
+
+      The All BASIC Code Archives does NOT promote commercial/shareware
+      or crippleware programs/software.  Please do NOT send any of these
+      to the ABC Archive for inclusion, as they will be deleted promptly.
+
+*** END LEGAL JARGON ***
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³                   The ALL BASIC CODE (ABC) Archives                       ³
+³             Brief Introduction & Commonly asked Questions                 ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+ Q: What is All BASIC Code?
+ A: The All BASIC Code (ABC) Archives is a massive collection of BASIC
+    code ranging from QB/QBasic/PDS/VBDOS to more modern (supported) versions
+    of the BASIC language such as ASIC, LibertyBASIC and PowerBASIC.  Source
+    codes are collected from various resources, such as the FidoNet QUIK_BAS
+    Echo, internet BASIC newsgroups and individual programmers who submit
+    their code via e-mail.  The ABC Archives operates similarily to the SWAG
+    Archives.  Surviving with contributions world wide.
+    For more on the SWAG Archives (Pascal snippets), please visit their
+    homepage at  http://www.gdsoft.com/swag/swag.html
+ Q: Its purpose?
+    The ABC Archives will be the future for all BASIC programmers and the
+    survival of the BASIC language.  With the help of many contributors
+    world wide, this repository will be the largest and most widely used
+    BASIC resource in the world.  Let's prove BASIC is still live and well!
+
+ Q: What files do I need to get started?
+ A: Assuming this came along with The ABC Express Reader v1.8, you're
+    already on your way to the BASIC "information superhighway."
+    What you need now are the bi-monthly ABC Packets which contain all the
+    BASIC snippets for the two months that were collected.
+    Look for:
+          ABCyymm.ZIP   (Where yy = year, mm = month)
+      ie. ABC9609.ZIP   (September 1996 ABC Packet)
+      ie. ABC9509.ZIP   (Oldest BASIC Packet, September 1995)
+             ^^^^
+             Watch out for ABC0995.ZIP which is the same packet.
+    Oldest Packet is September 1995, so don't tire yourself out trying
+    to find anything older than that.
+
+ Q: I have this .CDE file, but the Reader requires *.ABC?
+ A: You will have to run The ABC Reader to extract *.ABC from the .CDE
+    file.  Just make sure the .CDE and .UPD file resides in the directory
+    of the ABC Reader.
+
+ Q: Why not just release a text version?
+ A: I prefer the collection to be accessed with ease and organized for
+    the benefit of the user.  What would you do with 1000+ files in one
+    directory?  It makes it easier for the user to select their desired
+    interests, whether it be GRAPHICS, SOUND or anything in between.
+    Even though this leaves out Mac users and other platforms of BASIC,
+    there is not enough interest to convert the packets into plain text.
+    This also makes it an easier way to catalogue your own BASIC code
+    into the ABC Packets, which was really the original idea, but most
+    packets would grow empty unless there are people kind enough to
+    contribute to it.
+
+ Q: Can I send in some of my code?
+ A: Of course, any code you send in is greatly appreciated!
+    E-mail: William Yu <voxel@freenet.edmonton.ab.ca>
+    We suggest that you file attach your source codes to eliminate the
+    dreaded word wrapping.  If not, then you are suggested to UUencode
+    your file or use Postit!  Yes, we accept multiple files and binary
+    DATA, not EXE's!
+ Q: Do you accept libraries and object codes?
+ A: Yes, .LIB's & .OBJ's are welcome, and must be accompanied
+    by a demo or document file.  Because of the nature of libraries,
+    I will request the source code for verification (that there's no
+    hidden virus or "DELETE everything" routine) for the safety of all
+    ABC users.  After the verification process I will PROMPTLY delete the
+    source code.  Please do not send in commercial/shareware/crippleware
+    programs.
+ Q: How about Freeware (Copyrighted) programs?
+ A: Yes, copyrighted material is welcome.  In the case of copyrighted
+    material, you have granted unconditional permission for the ABC
+    Archives to distribute the code, unmodified of course.
+ Q: My code I sent you has an obvious quirk and error, and you didn't even
+    pick it up!  Do you even test these codes?
+ A: Perhaps, but your code is YOUR responsibility.  Most of the codes
+    contained in the ABC Archives have been previously tested, but we
+    assume NO RESPONSIBILITY over any of the snippets.  We do try to modify
+    any code which acts up or send it back to the original author to have
+    it updated, but whatever you send in will likely be unmodified.
+
+ Q: What is Postit! code?
+ A: These are actually BASIC Codes which run fine under QB,QBasic,PDS,VBDOS,PB
+    and extracts the binary file which was originally encoded.
+    Don't try running it under ASIC though, it won't work.
+    For PowerBASIC users, remove the DIM from the DIM SHARED for a proper
+    extraction.  As a side note, the ABC Express Reader eliminates this
+    extra process by decoding the Postit! file to its archived file.
+    You can easily disable this (since it takes a little longer to extract),
+    by pressing ALT+P when asked for an extraction name.
+ Q: How does one use Postit! 7.xx
+ A: The most commonly used command is: POSTIT72 -s e ABC.ZIP FileName.BAS
+    Which encodes the ABC.ZIP file to a loadable BASIC file <FileName.BAS>
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³   The ALL BASIC CODE Express Reader v1.8  (Features/Requirements/Files)   ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+ NOTE: Although this is the first official release, this reader is still
+       very much in its development stage.  Your comments are welcome!
+
+ The ABC Express Reader v1.8 Files List:
+
+          XREAD.EXE     ABC Express Reader v1.8
+          XREAD.DOC     ABC Express Reader Document File (This file)
+
+ ABC Express Reader v1.8 Requirements & Recommendations:
+     Minimal requirements:
+        *  512KB of free Extended (XMS) memory
+        *  CGA Card & Color Monitor
+        *  400KB Conventional memory (varies)
+        *  MS-DOS/PC-DOS 3.3+
+        *  350KB of HD Space
+
+     Recommended (+ For Music):
+        +  386SX or better
+        +  Sound Blaster compatible card
+        +  1MB of free Expanded (EMS) memory
+        +  550KB Conventional memory
+        -  2/3 Button Mouse
+        -  Printer
+        -  One of QB/QBasic/PDS/VBDOS/ASIC/PB or knowledge of
+        -  Smart Drive (ABC Express reader detects Version 4.0+)
+        -  For best results, run under DOS if you run Windows 3.x or W95
+        -  5MB (or enough free HD Space for ABC Reader & Packets)
+
+ ABC Express Reader List of Revisions for Version 1.8
+ -------------------------------------------------------------------------
+
+ Released v1.7, but found a horrible bug!
+ ========================================
+  - Did not properly install abc1996.cde or abc1997.cde, etc...
+    Because the reader did not account for 100+ snippets.
+
+ Released June 07, 1998
+ =======================
+  i - Minor fix to tutorial section (carried over from revision 1.6h)
+      Minor fix in checking disk space (not 100% correct though)
+**j - Re-entry problem fixed for Group Search results
+**k - Fixed XMS memory problem (returned error if more than 32M available)
+      Note: this error occurred only under real-mode DOS (found out myself).
+  l - You can now search whole words or sentences in Group Search
+
+ Previous Revisions (released May/22, Apr/02):
+ =============================================
+  a - Implemented play list (see using MUSIC.LST)
+ *b - Now checks for sufficient disk space before installing packets
+        + May underestimate disk space available (pre-caution)
+        + Can be bypassed
+ *c - Now checks for previously installed packets (99% reliable)
+        + Can be bypassed
+ *d - Removes the "new" flag from all index files during installation
+  e - Added an Origin Search option for Group Searches
+ *f - Partial keyword search available in Group Searches
+        + Limited to 5 keywords per field
+**g - Proper handling of > 250 characters/line
+**h - Proper delete/move instruction
+
+
+ (*  denote user suggested features, please e-mail your requests/suggestions)
+ (** denotes a bug fix carried from version 1.5)
+
+
+ NEW For ABC Express Reader v1.5
+ -------------------------------------------------------------------------
+
+     * ADD to packet, DELETE snippet/packet, MOVE code
+     * Ability to print code
+     * Yank in totals
+     * View All/New/Special snippets
+
+ ABC Express Reader FEATURES
+ -------------------------------------------------------------------------
+
+    This is the 1st official release of The ALL BASIC CODE Express Reader.
+    It is a major step-up from the old ABC Reader v1.10.  Although v1.5
+    is the official release, it is still partly under development.
+
+    ABC Express Reader v1.5  vs.  ABC Reader v1.10
+      * The Express reader offers Tutorials, Special features section
+        and the ability to create your own Custom Packets that may or may
+        not have anything to do with BASIC. (ie. C++ Code, or Pascal code)
+      * The Express reader is much much more faster in extracting
+        snippets and less of a strain on the HD.
+      * Since the Express reader utilizes XMS memory, it can load files
+        as large as your XMS memory can hold!  (Check configuration)
+      * The interface between the two readers are drastic.  The Express
+        reader maintains a modern 3D like environment, and is more user
+        friendly.
+      * Ability to extract POSTIT! encrypted files to it's archive (.ZIP)
+        In one single step.
+      * What definitively sets the two apart is the simple fact that
+        one takes advantage of the modern computer system's power,
+        while the other is more primitive and laxed.  Obviously there
+        are still computers of the stone-aged type, so The ABC Reader v1.10
+        wouldn't be completely obsolete.
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³               Using The ALL BASIC CODE Express Reader v1.8                ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+ COMMAND Line Options:
+
+     XREAD /NS           Disable Music
+     XREAD <MusicFile>   ie. XREAD MUSIC.GDM
+                         Must be a preconverted GDM file.
+                         Refer to BWSB by Edward Schlunder at
+                         Marc van den Dikkenberg's homepage:
+                         http://www.xs4all.nl/~excel/pb.html
+
+ For a complete list of commands/functions, use the On-line help [Press F1]
+
+[FAQ] Frequently Asked Questions:
+---------------------------------
+
+ Q: Why can't I hear any music?
+ A: Perhaps you have an unsupported sound card, or you don't have enough
+    memory to load it.  Enable EMS if you plan on listening to a large
+    music file.  Another thing to note, if your sound card and some
+    other device(s) share the same IRQ, then be sure not to use that other
+    device.  Also, make sure the music file actually exists if you input
+    one on the command line, there will be no error message, just bypasses
+    music instruction code.
+ Q: Why can't I load a .MOD or .S3M file?
+ A: It must be previously converted to a .GDM file with Edward Schlunder's
+    Bells, Whistle, Sound Board 2GDM.EXE file.
+ Q: What's internal for default song?
+ A: If you leave this field as is, it will load up a song internal to the
+    XREAD.EXE file.  In case you must know, the title to that catchy tune
+    is called "Clutching at Life" by an unknown composer... which would
+    occupy approx. 50KB of memory if you wish to load it.  Peanuts :)
+
+ Q: Why does my computer hang when I try to exit?
+ A: Shouldn't happen, but in case it does, just disable the music since
+    it takes up a lot of memory.  Either that or free up some EMS or
+    unload some TSRs.
+ Q: Why doesn't it do anything when I select a packet to view?
+ A: You're probably missing the corresponding .IDX file.
+    Check that it exists, or else the ABC Reader will abort.
+
+ Q: I seem to get weird results when I have MAXIMIZED XMS usage... why?
+ A: It depends on the operating system or shell you might be running under.
+    Some programs like QEMM allocate memory on the fly, so it might not
+    give the ABC Express Reader its fair share of the memory base.
+    Stick with minimal since maximum XMS usage is seldom needed.  In fact,
+    the ABC Express Reader probably only uses about 150KB of XMS anyway.
+    The extra is there in case YOU decide to include a big fat file in the
+    ABC Packets and view it, and just as a cushion in case I decide to use
+    more in future releases.
+
+ Q: What is CUSTOM there for?
+ A: Right now, just taking up space.  However, if you do this:
+    REN GRAPHICS.ABC GRAPHICS.CST
+    REN GRAPHICS.IDX GRAPHICS.CDX
+    It will work quite nicely.  It's like a separate ABC Archive.
+    So you can put your Pascal/C/C++/Assembly code there for cataloguing.
+    Try adding to the section your favorite routines.
+ Q: What is SPECIAL there for?
+ A: Still under development.  I really don't know yet, but if you have
+    any suggestions, I would like to hear from you.  My first idea was
+    to create a "runable programs section," in which I would create a
+    new "BASIC" language and put up the code in the SPECIALS section
+    for people to run right from the Reader.  It would also enable people
+    to program in this new "BASIC" language and put up their programs there
+    for other people to run from the Reader.  But something like this would
+    take a few months to perfect, and I just don't have the time.
+    Oh well, next summer maybe.
+
+ Q: Your reader looks like WINDOWS!  Ahhhhhhhhhh!
+ A: That's what I thought at first... sorry, heheheh.
+ Q: Speaking of which, will there be a Windows version out?
+ A: Yes, The ABC Reader 95 is released on July 20, 1998
+    
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³          The ABC Express Reader v1.8 Credits and Special Thanks           ³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+   * Reader XMS routines courtesy of Robin Duffy
+   * Music routine coutesy of Edward Schlunder's "Bells, Whistles, and Sound
+     Boards."
+   * Thanks to Charles Quante, Marc van den Dikkenberg and Ollie Cook for
+     supplying homepages for the ABC Archives!
+   * Thanks to all distributors for spreading the ABC Archives world wide!
+   * And of course, thanks to all contributors!
