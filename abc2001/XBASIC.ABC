@@ -1,0 +1,3759 @@
+Vincent Voois                  bitmap shifter routine.        vvacme@worldonline.nl          06-15-01 (19:34)       QB,  PDS               1    44519    Apicshif.x  '
+' ####################
+' #####  PROLOG  #####
+' ####################
+'
+PROGRAM	"apicshift"
+VERSION	"1.0000"
+'
+'	This small program demonstrates how you can use mouse coordinates
+' to shuffle with images on a label - grid.
+'
+' I was just fiddling around to have some usefull code for my own
+' application, i think others might have use of this basics too.
+'
+' The routine has been slightly optimized as it did not run very quick
+' on my P133 notebook. I also noticed the drag kept on going even if the
+' mouseup message was already due. I added a skipper in the MouseDrag routine
+' to bail out as soon as the mouse-button state becomes zero.
+'
+'	May 6th 2000
+' Vincent Voois
+'
+' ******  Comment libraries in/out as needed  *****
+'
+'	IMPORT	"xma"   ' Math library     : SIN/ASIN/SINH/ASINH/LOG/EXP/SQRT...
+'	IMPORT	"xcm"   ' Complex library  : complex number library  (trig, etc)
+	IMPORT	"xst"   ' Standard library : required by most programs
+	IMPORT	"xgr"   ' GraphicsDesigner : required by GuiDesigner programs
+	IMPORT	"xui"   ' GuiDesigner      : required by GuiDesigner programs
+'
+INTERNAL FUNCTION  Entry         ()
+INTERNAL FUNCTION  InitGui       ()
+INTERNAL FUNCTION  InitProgram   ()
+INTERNAL FUNCTION  CreateWindows ()
+INTERNAL FUNCTION  InitWindows   ()
+INTERNAL FUNCTION  Pictureshifter (grid, message, v0, v1, v2, v3, r0, ANY)
+INTERNAL FUNCTION  PictureshifterCode (grid, message, v0, v1, v2, v3, kid, ANY)
+
+UBYTE #image[]
+XLONG #pwidth, #pheight, #gwidth, #gheight, #GenGrid
+'
+'
+' ######################
+' #####  Entry ()  #####
+' ######################
+'
+FUNCTION  Entry ()
+	SHARED  terminateProgram
+	STATIC	entry
+'
+	IF entry THEN RETURN					' enter once
+	entry =  $$TRUE								' enter occured
+'
+	InitGui ()										' initialize messages
+	InitProgram ()								' initialize this program
+	CreateWindows ()							' create main window and others
+	InitWindows ()								' initialize windows and grids
+'	PRINT #GenGrid, #pwidth, #pheight, #gwidth, #gheight
+'
+	IF LIBRARY(0) THEN RETURN			' main program executes message loop
+'
+	DO														' the message loop
+		XgrProcessMessages (1)			' process one message
+	LOOP UNTIL terminateProgram		' and repeat until program is terminated
+END FUNCTION
+'
+'
+' ########################
+' #####  InitGui ()  #####
+' ########################
+'
+' InitGui() initializes cursor, icon, message, and display variables.
+' Programs can reference these variables, but must never change them.
+'
+FUNCTION  InitGui ()
+'
+' need to set program name so grid properties
+' can be set from the grid property database.
+'
+	program$ = PROGRAM$(0)
+	XstSetProgramName (@program$)
+'
+' ***************************************
+' *****  Register Standard Cursors  *****
+' ***************************************
+'
+	XgrRegisterCursor (@"default",      @#cursorDefault)
+	XgrRegisterCursor (@"arrow",        @#cursorArrow)
+	XgrRegisterCursor (@"n",            @#cursorN)
+	XgrRegisterCursor (@"s",            @#cursorS)
+	XgrRegisterCursor (@"e",            @#cursorE)
+	XgrRegisterCursor (@"w",            @#cursorW)
+	XgrRegisterCursor (@"ns",           @#cursorArrowsNS)
+	XgrRegisterCursor (@"ns",           @#cursorArrowsSN)
+	XgrRegisterCursor (@"ew",           @#cursorArrowsEW)
+	XgrRegisterCursor (@"ew",           @#cursorArrowsWE)
+	XgrRegisterCursor (@"nwse",         @#cursorArrowsNWSE)
+	XgrRegisterCursor (@"nesw",         @#cursorArrowsNESW)
+	XgrRegisterCursor (@"all",          @#cursorArrowsAll)
+	XgrRegisterCursor (@"plus",         @#cursorPlus)
+	XgrRegisterCursor (@"wait",         @#cursorWait)
+	XgrRegisterCursor (@"insert",       @#cursorInsert)
+	XgrRegisterCursor (@"crosshair",    @#cursorCrosshair)
+	XgrRegisterCursor (@"hourglass",    @#cursorHourglass)
+	XgrRegisterCursor (@"hand",         @#cursorHand)
+	XgrRegisterCursor (@"help",         @#cursorHelp)
+'
+	#defaultCursor = #cursorDefault
+'
+'
+' ********************************************
+' *****  Register Standard Window Icons  *****
+' ********************************************
+'
+	XgrRegisterIcon (@"hand",					@#iconHand)
+	XgrRegisterIcon (@"asterisk",			@#iconAsterisk)
+	XgrRegisterIcon (@"question",			@#iconQuestion)
+	XgrRegisterIcon (@"exclamation",	@#iconExclamation)
+	XgrRegisterIcon (@"application",	@#iconApplication)
+'
+	XgrRegisterIcon (@"hand",					@#iconStop)						' alias
+	XgrRegisterIcon (@"asterisk",			@#iconInformation)		' alias
+	XgrRegisterIcon (@"application",  @#iconBlank)					' alias
+'
+	XgrRegisterIcon (@"window",				@#iconWindow)					' custom
+'
+'
+' ******************************
+' *****  Register Messages *****  Create message numbers for message names
+' ******************************
+'
+	XgrRegisterMessage (@"Blowback",										@#Blowback)
+	XgrRegisterMessage (@"Callback",										@#Callback)
+	XgrRegisterMessage (@"Cancel",											@#Cancel)
+	XgrRegisterMessage (@"Change",											@#Change)
+	XgrRegisterMessage (@"CloseWindow",									@#CloseWindow)
+	XgrRegisterMessage (@"ContextChange",								@#ContextChange)
+	XgrRegisterMessage (@"Create",											@#Create)
+	XgrRegisterMessage (@"CreateValueArray",						@#CreateValueArray)
+	XgrRegisterMessage (@"CreateWindow",								@#CreateWindow)
+	XgrRegisterMessage (@"CursorH",											@#CursorH)
+	XgrRegisterMessage (@"CursorV",											@#CursorV)
+	XgrRegisterMessage (@"Deselected",									@#Deselected)
+	XgrRegisterMessage (@"Destroy",											@#Destroy)
+	XgrRegisterMessage (@"Destroyed",										@#Destroyed)
+	XgrRegisterMessage (@"DestroyWindow",								@#DestroyWindow)
+	XgrRegisterMessage (@"Disable",											@#Disable)
+	XgrRegisterMessage (@"Disabled",										@#Disabled)
+	XgrRegisterMessage (@"Displayed",										@#Displayed)
+	XgrRegisterMessage (@"DisplayWindow",								@#DisplayWindow)
+	XgrRegisterMessage (@"Enable",											@#Enable)
+	XgrRegisterMessage (@"Enabled",											@#Enabled)
+	XgrRegisterMessage (@"Enter",												@#Enter)
+	XgrRegisterMessage (@"ExitMessageLoop",							@#ExitMessageLoop)
+	XgrRegisterMessage (@"Find",												@#Find)
+	XgrRegisterMessage (@"FindForward",									@#FindForward)
+	XgrRegisterMessage (@"FindReverse",									@#FindReverse)
+	XgrRegisterMessage (@"Forward",											@#Forward)
+	XgrRegisterMessage (@"GetAlign",										@#GetAlign)
+	XgrRegisterMessage (@"GetBorder",										@#GetBorder)
+	XgrRegisterMessage (@"GetBorderOffset",							@#GetBorderOffset)
+	XgrRegisterMessage (@"GetCallback",									@#GetCallback)
+	XgrRegisterMessage (@"GetCallbackArgs",							@#GetCallbackArgs)
+	XgrRegisterMessage (@"GetCan",											@#GetCan)
+	XgrRegisterMessage (@"GetCharacterMapArray",				@#GetCharacterMapArray)
+	XgrRegisterMessage (@"GetCharacterMapEntry",				@#GetCharacterMapEntry)
+	XgrRegisterMessage (@"GetClipGrid",									@#GetClipGrid)
+	XgrRegisterMessage (@"GetColor",										@#GetColor)
+	XgrRegisterMessage (@"GetColorExtra",								@#GetColorExtra)
+	XgrRegisterMessage (@"GetCursor",										@#GetCursor)
+	XgrRegisterMessage (@"GetCursorXY",									@#GetCursorXY)
+	XgrRegisterMessage (@"GetDisplay",									@#GetDisplay)
+	XgrRegisterMessage (@"GetEnclosedGrids",						@#GetEnclosedGrids)
+	XgrRegisterMessage (@"GetEnclosingGrid",						@#GetEnclosingGrid)
+	XgrRegisterMessage (@"GetFocusColor",								@#GetFocusColor)
+	XgrRegisterMessage (@"GetFocusColorExtra",					@#GetFocusColorExtra)
+	XgrRegisterMessage (@"GetFont",											@#GetFont)
+	XgrRegisterMessage (@"GetFontMetrics",							@#GetFontMetrics)
+	XgrRegisterMessage (@"GetFontNumber",								@#GetFontNumber)
+	XgrRegisterMessage (@"GetGridFunction",							@#GetGridFunction)
+	XgrRegisterMessage (@"GetGridFunctionName",					@#GetGridFunctionName)
+	XgrRegisterMessage (@"GetGridName",									@#GetGridName)
+	XgrRegisterMessage (@"GetGridNumber",								@#GetGridNumber)
+	XgrRegisterMessage (@"GetGridProperties",						@#GetGridProperties)
+	XgrRegisterMessage (@"GetGridType",									@#GetGridType)
+	XgrRegisterMessage (@"GetGridTypeName",							@#GetGridTypeName)
+	XgrRegisterMessage (@"GetGroup",										@#GetGroup)
+	XgrRegisterMessage (@"GetHelp",											@#GetHelp)
+	XgrRegisterMessage (@"GetHelpFile",									@#GetHelpFile)
+	XgrRegisterMessage (@"GetHelpString",								@#GetHelpString)
+	XgrRegisterMessage (@"GetHelpStrings",							@#GetHelpStrings)
+	XgrRegisterMessage (@"GetHintString",								@#GetHintString)
+	XgrRegisterMessage (@"GetImage",										@#GetImage)
+	XgrRegisterMessage (@"GetImageCoords",							@#GetImageCoords)
+	XgrRegisterMessage (@"GetIndent",										@#GetIndent)
+	XgrRegisterMessage (@"GetInfo",											@#GetInfo)
+	XgrRegisterMessage (@"GetJustify",									@#GetJustify)
+	XgrRegisterMessage (@"GetKeyboardFocus",						@#GetKeyboardFocus)
+	XgrRegisterMessage (@"GetKeyboardFocusGrid",				@#GetKeyboardFocusGrid)
+	XgrRegisterMessage (@"GetKidArray",									@#GetKidArray)
+	XgrRegisterMessage (@"GetKidNumber",								@#GetKidNumber)
+	XgrRegisterMessage (@"GetKids",											@#GetKids)
+	XgrRegisterMessage (@"GetKind",											@#GetKind)
+	XgrRegisterMessage (@"GetMaxMinSize",								@#GetMaxMinSize)
+	XgrRegisterMessage (@"GetMessageFunc",							@#GetMessageFunc)
+	XgrRegisterMessage (@"GetMessageFuncArray",					@#GetMessageFuncArray)
+	XgrRegisterMessage (@"GetMessageSub",								@#GetMessageSub)
+	XgrRegisterMessage (@"GetMessageSubArray",					@#GetMessageSubArray)
+	XgrRegisterMessage (@"GetModalInfo",								@#GetModalInfo)
+	XgrRegisterMessage (@"GetModalWindow",							@#GetModalWindow)
+	XgrRegisterMessage (@"GetParent",										@#GetParent)
+	XgrRegisterMessage (@"GetPosition",									@#GetPosition)
+	XgrRegisterMessage (@"GetProtoInfo",								@#GetProtoInfo)
+	XgrRegisterMessage (@"GetRedrawFlags",							@#GetRedrawFlags)
+	XgrRegisterMessage (@"GetSize",											@#GetSize)
+	XgrRegisterMessage (@"GetSmallestSize",							@#GetSmallestSize)
+	XgrRegisterMessage (@"GetState",										@#GetState)
+	XgrRegisterMessage (@"GetStyle",										@#GetStyle)
+	XgrRegisterMessage (@"GetTabArray",									@#GetTabArray)
+	XgrRegisterMessage (@"GetTabWidth",									@#GetTabWidth)
+	XgrRegisterMessage (@"GetTextArray",								@#GetTextArray)
+	XgrRegisterMessage (@"GetTextArrayBounds",					@#GetTextArrayBounds)
+	XgrRegisterMessage (@"GetTextArrayLine",						@#GetTextArrayLine)
+	XgrRegisterMessage (@"GetTextArrayLines",						@#GetTextArrayLines)
+	XgrRegisterMessage (@"GetTextCursor",								@#GetTextCursor)
+	XgrRegisterMessage (@"GetTextFilename",							@#GetTextFilename)
+	XgrRegisterMessage (@"GetTextPosition",							@#GetTextPosition)
+	XgrRegisterMessage (@"GetTextSelection",						@#GetTextSelection)
+	XgrRegisterMessage (@"GetTextSpacing",							@#GetTextSpacing)
+	XgrRegisterMessage (@"GetTextString",								@#GetTextString)
+	XgrRegisterMessage (@"GetTextStrings",							@#GetTextStrings)
+	XgrRegisterMessage (@"GetTexture",									@#GetTexture)
+	XgrRegisterMessage (@"GetTimer",										@#GetTimer)
+	XgrRegisterMessage (@"GetValue",										@#GetValue)
+	XgrRegisterMessage (@"GetValueArray",								@#GetValueArray)
+	XgrRegisterMessage (@"GetValues",										@#GetValues)
+	XgrRegisterMessage (@"GetWindow",										@#GetWindow)
+	XgrRegisterMessage (@"GetWindowFunction",						@#GetWindowFunction)
+	XgrRegisterMessage (@"GetWindowGrid",								@#GetWindowGrid)
+	XgrRegisterMessage (@"GetWindowIcon",								@#GetWindowIcon)
+	XgrRegisterMessage (@"GetWindowSize",								@#GetWindowSize)
+	XgrRegisterMessage (@"GetWindowTitle",							@#GetWindowTitle)
+	XgrRegisterMessage (@"GotKeyboardFocus",						@#GotKeyboardFocus)
+	XgrRegisterMessage (@"GrabArray",										@#GrabArray)
+	XgrRegisterMessage (@"GrabTextArray",								@#GrabTextArray)
+	XgrRegisterMessage (@"GrabTextString",							@#GrabTextString)
+	XgrRegisterMessage (@"GrabValueArray",							@#GrabValueArray)
+	XgrRegisterMessage (@"Help",												@#Help)
+	XgrRegisterMessage (@"Hidden",											@#Hidden)
+	XgrRegisterMessage (@"HideTextCursor",							@#HideTextCursor)
+	XgrRegisterMessage (@"HideWindow",									@#HideWindow)
+	XgrRegisterMessage (@"Initialize",									@#Initialize)
+	XgrRegisterMessage (@"Initialized",									@#Initialized)
+	XgrRegisterMessage (@"Inline",											@#Inline)
+	XgrRegisterMessage (@"InquireText",									@#InquireText)
+	XgrRegisterMessage (@"KeyboardFocusBackward",				@#KeyboardFocusBackward)
+	XgrRegisterMessage (@"KeyboardFocusForward",				@#KeyboardFocusForward)
+	XgrRegisterMessage (@"KeyDown",											@#KeyDown)
+	XgrRegisterMessage (@"KeyUp",												@#KeyUp)
+	XgrRegisterMessage (@"LostKeyboardFocus",						@#LostKeyboardFocus)
+	XgrRegisterMessage (@"LostTextSelection",						@#LostTextSelection)
+	XgrRegisterMessage (@"Maximized",										@#Maximized)
+	XgrRegisterMessage (@"MaximizeWindow",							@#MaximizeWindow)
+	XgrRegisterMessage (@"Maximum",											@#Maximum)
+	XgrRegisterMessage (@"Minimized",										@#Minimized)
+	XgrRegisterMessage (@"MinimizeWindow",							@#MinimizeWindow)
+	XgrRegisterMessage (@"Minimum",											@#Minimum)
+	XgrRegisterMessage (@"MonitorContext",							@#MonitorContext)
+	XgrRegisterMessage (@"MonitorHelp",									@#MonitorHelp)
+	XgrRegisterMessage (@"MonitorKeyboard",							@#MonitorKeyboard)
+	XgrRegisterMessage (@"MonitorMouse",								@#MonitorMouse)
+	XgrRegisterMessage (@"MouseDown",										@#MouseDown)
+	XgrRegisterMessage (@"MouseDrag",										@#MouseDrag)
+	XgrRegisterMessage (@"MouseEnter",									@#MouseEnter)
+	XgrRegisterMessage (@"MouseExit",										@#MouseExit)
+	XgrRegisterMessage (@"MouseMove",										@#MouseMove)
+	XgrRegisterMessage (@"MouseUp",											@#MouseUp)
+	XgrRegisterMessage (@"MouseWheel",									@#MouseWheel)
+	XgrRegisterMessage (@"MuchLess",										@#MuchLess)
+	XgrRegisterMessage (@"MuchMore",										@#MuchMore)
+	XgrRegisterMessage (@"Notify",											@#Notify)
+	XgrRegisterMessage (@"OneLess",											@#OneLess)
+	XgrRegisterMessage (@"OneMore",											@#OneMore)
+	XgrRegisterMessage (@"PokeArray",										@#PokeArray)
+	XgrRegisterMessage (@"PokeTextArray",								@#PokeTextArray)
+	XgrRegisterMessage (@"PokeTextString",							@#PokeTextString)
+	XgrRegisterMessage (@"PokeValueArray",							@#PokeValueArray)
+	XgrRegisterMessage (@"Print",												@#Print)
+	XgrRegisterMessage (@"Redraw",											@#Redraw)
+	XgrRegisterMessage (@"RedrawGrid",									@#RedrawGrid)
+	XgrRegisterMessage (@"RedrawLines",									@#RedrawLines)
+	XgrRegisterMessage (@"Redrawn",											@#Redrawn)
+	XgrRegisterMessage (@"RedrawText",									@#RedrawText)
+	XgrRegisterMessage (@"RedrawWindow",								@#RedrawWindow)
+	XgrRegisterMessage (@"Replace",											@#Replace)
+	XgrRegisterMessage (@"ReplaceForward",							@#ReplaceForward)
+	XgrRegisterMessage (@"ReplaceReverse",							@#ReplaceReverse)
+	XgrRegisterMessage (@"Reset",												@#Reset)
+	XgrRegisterMessage (@"Resize",											@#Resize)
+	XgrRegisterMessage (@"Resized",											@#Resized)
+	XgrRegisterMessage (@"ResizeNot",										@#ResizeNot)
+	XgrRegisterMessage (@"ResizeWindow",								@#ResizeWindow)
+	XgrRegisterMessage (@"ResizeWindowToGrid",					@#ResizeWindowToGrid)
+	XgrRegisterMessage (@"Resized",											@#Resized)
+	XgrRegisterMessage (@"Reverse",											@#Reverse)
+	XgrRegisterMessage (@"ScrollH",											@#ScrollH)
+	XgrRegisterMessage (@"ScrollV",											@#ScrollV)
+	XgrRegisterMessage (@"Select",											@#Select)
+	XgrRegisterMessage (@"Selected",										@#Selected)
+	XgrRegisterMessage (@"Selection",										@#Selection)
+	XgrRegisterMessage (@"SelectWindow",								@#SelectWindow)
+	XgrRegisterMessage (@"SetAlign",										@#SetAlign)
+	XgrRegisterMessage (@"SetBorder",										@#SetBorder)
+	XgrRegisterMessage (@"SetBorderOffset",							@#SetBorderOffset)
+	XgrRegisterMessage (@"SetCallback",									@#SetCallback)
+	XgrRegisterMessage (@"SetCan",											@#SetCan)
+	XgrRegisterMessage (@"SetCharacterMapArray",				@#SetCharacterMapArray)
+	XgrRegisterMessage (@"SetCharacterMapEntry",				@#SetCharacterMapEntry)
+	XgrRegisterMessage (@"SetClipGrid",									@#SetClipGrid)
+	XgrRegisterMessage (@"SetColor",										@#SetColor)
+	XgrRegisterMessage (@"SetColorAll",									@#SetColorAll)
+	XgrRegisterMessage (@"SetColorExtra",								@#SetColorExtra)
+	XgrRegisterMessage (@"SetColorExtraAll",						@#SetColorExtraAll)
+	XgrRegisterMessage (@"SetCursor",										@#SetCursor)
+	XgrRegisterMessage (@"SetCursorXY",									@#SetCursorXY)
+	XgrRegisterMessage (@"SetDisplay",									@#SetDisplay)
+	XgrRegisterMessage (@"SetFocusColor",								@#SetFocusColor)
+	XgrRegisterMessage (@"SetFocusColorExtra",					@#SetFocusColorExtra)
+	XgrRegisterMessage (@"SetFont",											@#SetFont)
+	XgrRegisterMessage (@"SetFontNumber",								@#SetFontNumber)
+	XgrRegisterMessage (@"SetGridFunction",							@#SetGridFunction)
+	XgrRegisterMessage (@"SetGridFunctionName",					@#SetGridFunctionName)
+	XgrRegisterMessage (@"SetGridName",									@#SetGridName)
+	XgrRegisterMessage (@"SetGridProperties",						@#SetGridProperties)
+	XgrRegisterMessage (@"SetGridType",									@#SetGridType)
+	XgrRegisterMessage (@"SetGridTypeName",							@#SetGridTypeName)
+	XgrRegisterMessage (@"SetGroup",										@#SetGroup)
+	XgrRegisterMessage (@"SetHelp",											@#SetHelp)
+	XgrRegisterMessage (@"SetHelpFile",									@#SetHelpFile)
+	XgrRegisterMessage (@"SetHelpString",								@#SetHelpString)
+	XgrRegisterMessage (@"SetHelpStrings",							@#SetHelpStrings)
+	XgrRegisterMessage (@"SetHintString",								@#SetHintString)
+	XgrRegisterMessage (@"SetImage",										@#SetImage)
+	XgrRegisterMessage (@"SetImageCoords",							@#SetImageCoords)
+	XgrRegisterMessage (@"SetIndent",										@#SetIndent)
+	XgrRegisterMessage (@"SetInfo",											@#SetInfo)
+	XgrRegisterMessage (@"SetJustify",									@#SetJustify)
+	XgrRegisterMessage (@"SetKeyboardFocus",						@#SetKeyboardFocus)
+	XgrRegisterMessage (@"SetKeyboardFocusGrid",				@#SetKeyboardFocusGrid)
+	XgrRegisterMessage (@"SetKidArray",									@#SetKidArray)
+	XgrRegisterMessage (@"SetMaxMinSize",								@#SetMaxMinSize)
+	XgrRegisterMessage (@"SetMessageFunc",							@#SetMessageFunc)
+	XgrRegisterMessage (@"SetMessageFuncArray",					@#SetMessageFuncArray)
+	XgrRegisterMessage (@"SetMessageSub",								@#SetMessageSub)
+	XgrRegisterMessage (@"SetMessageSubArray",					@#SetMessageSubArray)
+	XgrRegisterMessage (@"SetModalWindow",							@#SetModalWindow)
+	XgrRegisterMessage (@"SetParent",										@#SetParent)
+	XgrRegisterMessage (@"SetPosition",									@#SetPosition)
+	XgrRegisterMessage (@"SetRedrawFlags",							@#SetRedrawFlags)
+	XgrRegisterMessage (@"SetSize",											@#SetSize)
+	XgrRegisterMessage (@"SetState",										@#SetState)
+	XgrRegisterMessage (@"SetStyle",										@#SetStyle)
+	XgrRegisterMessage (@"SetTabArray",									@#SetTabArray)
+	XgrRegisterMessage (@"SetTabWidth",									@#SetTabWidth)
+	XgrRegisterMessage (@"SetTextArray",								@#SetTextArray)
+	XgrRegisterMessage (@"SetTextArrayLine",						@#SetTextArrayLine)
+	XgrRegisterMessage (@"SetTextArrayLines",						@#SetTextArrayLines)
+	XgrRegisterMessage (@"SetTextCursor",								@#SetTextCursor)
+	XgrRegisterMessage (@"SetTextFilename",							@#SetTextFilename)
+	XgrRegisterMessage (@"SetTextSelection",						@#SetTextSelection)
+	XgrRegisterMessage (@"SetTextSpacing",							@#SetTextSpacing)
+	XgrRegisterMessage (@"SetTextString",								@#SetTextString)
+	XgrRegisterMessage (@"SetTextStrings",							@#SetTextStrings)
+	XgrRegisterMessage (@"SetTexture",									@#SetTexture)
+	XgrRegisterMessage (@"SetTimer",										@#SetTimer)
+	XgrRegisterMessage (@"SetValue",										@#SetValue)
+	XgrRegisterMessage (@"SetValues",										@#SetValues)
+	XgrRegisterMessage (@"SetValueArray",								@#SetValueArray)
+	XgrRegisterMessage (@"SetWindowFunction",						@#SetWindowFunction)
+	XgrRegisterMessage (@"SetWindowIcon",								@#SetWindowIcon)
+	XgrRegisterMessage (@"SetWindowTitle",							@#SetWindowTitle)
+	XgrRegisterMessage (@"ShowTextCursor",							@#ShowTextCursor)
+	XgrRegisterMessage (@"ShowWindow",									@#ShowWindow)
+	XgrRegisterMessage (@"SomeLess",										@#SomeLess)
+	XgrRegisterMessage (@"SomeMore",										@#SomeMore)
+	XgrRegisterMessage (@"StartTimer",									@#StartTimer)
+	XgrRegisterMessage (@"SystemMessage",								@#SystemMessage)
+	XgrRegisterMessage (@"TextDelete",									@#TextDelete)
+	XgrRegisterMessage (@"TextEvent",										@#TextEvent)
+	XgrRegisterMessage (@"TextInsert",									@#TextInsert)
+	XgrRegisterMessage (@"TextModified",								@#TextModified)
+	XgrRegisterMessage (@"TextReplace",									@#TextReplace)
+	XgrRegisterMessage (@"TimeOut",											@#TimeOut)
+	XgrRegisterMessage (@"Update",											@#Update)
+	XgrRegisterMessage (@"WindowClose",									@#WindowClose)
+	XgrRegisterMessage (@"WindowCreate",								@#WindowCreate)
+	XgrRegisterMessage (@"WindowDeselected",						@#WindowDeselected)
+	XgrRegisterMessage (@"WindowDestroy",								@#WindowDestroy)
+	XgrRegisterMessage (@"WindowDestroyed",							@#WindowDestroyed)
+	XgrRegisterMessage (@"WindowDisplay",								@#WindowDisplay)
+	XgrRegisterMessage (@"WindowDisplayed",							@#WindowDisplayed)
+	XgrRegisterMessage (@"WindowGetDisplay",						@#WindowGetDisplay)
+	XgrRegisterMessage (@"WindowGetFunction",						@#WindowGetFunction)
+	XgrRegisterMessage (@"WindowGetIcon",								@#WindowGetIcon)
+	XgrRegisterMessage (@"WindowGetKeyboardFocusGrid",	@#WindowGetKeyboardFocusGrid)
+	XgrRegisterMessage (@"WindowGetSelectedWindow",			@#WindowGetSelectedWindow)
+	XgrRegisterMessage (@"WindowGetSize",								@#WindowGetSize)
+	XgrRegisterMessage (@"WindowGetTitle",							@#WindowGetTitle)
+	XgrRegisterMessage (@"WindowHelp",									@#WindowHelp)
+	XgrRegisterMessage (@"WindowHide",									@#WindowHide)
+	XgrRegisterMessage (@"WindowHidden",								@#WindowHidden)
+	XgrRegisterMessage (@"WindowKeyDown",								@#WindowKeyDown)
+	XgrRegisterMessage (@"WindowKeyUp",									@#WindowKeyUp)
+	XgrRegisterMessage (@"WindowMaximize",							@#WindowMaximize)
+	XgrRegisterMessage (@"WindowMaximized",							@#WindowMaximized)
+	XgrRegisterMessage (@"WindowMinimize",							@#WindowMinimize)
+	XgrRegisterMessage (@"WindowMinimized",							@#WindowMinimized)
+	XgrRegisterMessage (@"WindowMonitorContext",				@#WindowMonitorContext)
+	XgrRegisterMessage (@"WindowMonitorHelp",						@#WindowMonitorHelp)
+	XgrRegisterMessage (@"WindowMonitorKeyboard",				@#WindowMonitorKeyboard)
+	XgrRegisterMessage (@"WindowMonitorMouse",					@#WindowMonitorMouse)
+	XgrRegisterMessage (@"WindowMouseDown",							@#WindowMouseDown)
+	XgrRegisterMessage (@"WindowMouseDrag",							@#WindowMouseDrag)
+	XgrRegisterMessage (@"WindowMouseEnter",						@#WindowMouseEnter)
+	XgrRegisterMessage (@"WindowMouseExit",							@#WindowMouseExit)
+	XgrRegisterMessage (@"WindowMouseMove",							@#WindowMouseMove)
+	XgrRegisterMessage (@"WindowMouseUp",								@#WindowMouseUp)
+	XgrRegisterMessage (@"WindowMouseWheel",						@#WindowMouseWheel)
+	XgrRegisterMessage (@"WindowRedraw",								@#WindowRedraw)
+	XgrRegisterMessage (@"WindowRegister",							@#WindowRegister)
+	XgrRegisterMessage (@"WindowResize",								@#WindowResize)
+	XgrRegisterMessage (@"WindowResized",								@#WindowResized)
+	XgrRegisterMessage (@"WindowResizeToGrid",					@#WindowResizeToGrid)
+	XgrRegisterMessage (@"WindowSelect",								@#WindowSelect)
+	XgrRegisterMessage (@"WindowSelected",							@#WindowSelected)
+	XgrRegisterMessage (@"WindowSetFunction",						@#WindowSetFunction)
+	XgrRegisterMessage (@"WindowSetIcon",								@#WindowSetIcon)
+	XgrRegisterMessage (@"WindowSetKeyboardFocusGrid",	@#WindowSetKeyboardFocusGrid)
+	XgrRegisterMessage (@"WindowSetTitle",							@#WindowSetTitle)
+	XgrRegisterMessage (@"WindowShow",									@#WindowShow)
+	XgrRegisterMessage (@"WindowSystemMessage",					@#WindowSystemMessage)
+	XgrRegisterMessage (@"LastMessage",									@#LastMessage)
+'
+	XgrGetDisplaySize ("", @#displayWidth, @#displayHeight, @#windowBorderWidth, @#windowTitleHeight)
+END FUNCTION
+'
+'
+' ############################
+' #####  InitProgram ()  #####
+' ############################
+'
+'
+'	Insert your own picture location here.
+'
+'
+FUNCTION  InitProgram ()
+	'Set global picture spot and size
+	#Picture$ = "map20.BMP"
+	XgrLoadImage(#Picture$, @#image[])
+	XgrGetImageArrayInfo(@#image[], @bbp, @#pwidth, @#pheight)
+
+END FUNCTION
+'
+'
+' ##############################
+' #####  CreateWindows ()  #####
+' ##############################
+'
+' GuiDesigner puts code in CreateWindows() to create, initialize, display
+' every window you design graphically.  Don't modify this function unless
+' absolutely necessary - GuiDesigner needs to read and update it at times.
+'
+' CreateWindows() usually should not be executed when compiled as library.
+' Start CreateWindows() with "IF LIBRARY(0) THEN RETURN" to assure this.
+'
+FUNCTION  CreateWindows ()
+'
+	IF LIBRARY(0) THEN RETURN
+'
+	Pictureshifter (@Pictureshifter, #CreateWindow, 0, 0, 0, 0, 0, 0)
+	XuiSendMessage ( Pictureshifter, #SetCallback, Pictureshifter, &PictureshifterCode(), -1, -1, -1, 0)
+	XuiSendMessage ( Pictureshifter, #Initialize, 0, 0, 0, 0, 0, 0)
+	XuiSendMessage ( Pictureshifter, #SetGridProperties, -1, 0, 0, 0, 0, 0)
+	XuiSendMessage ( Pictureshifter, #SetImage, 0, 0, 0, 0, 1, @#Picture$)
+	XuiSendMessage ( Pictureshifter, #SetImageCoords, 0, 0, #pwidth, #pheight, 1, Picture$)
+	XuiSendMessage ( Pictureshifter, #DisplayWindow, 0, 0, 0, 0, 0, 0)
+
+	'Set Global image grid to run.
+	#GenGrid = Pictureshifter
+END FUNCTION
+'
+'
+' ############################
+' #####  InitWindows ()  #####
+' ############################
+'
+' Add code to this function to initialize anything your program needs
+' to initialize after CreateWindows() creates your programs windows.
+' For initialization before CreateWindows(), add code to InitProgram().
+'
+' Do not delete this function, leave it empty if not needed.
+'
+FUNCTION  InitWindows ()
+	UBYTE gridimage[]
+	XgrSetCEO(&PictureshifterCode())
+
+	'Display null spot coordinates
+	lbx$ = "0"
+	lby$ = "0"
+	XuiSendMessage (#GenGrid, #SetTextString, 0, 0, 0, 0, 2, lbx$)
+	XuiSendMessage (#GenGrid, #SetTextString, 0, 0, 0, 0, 5, lby$)
+	XuiSendMessage (#GenGrid, #RedrawGrid, 5, 5, 58, 14, 2, 0)
+	XuiSendMessage (#GenGrid, #RedrawGrid, 5, 5, 58, 14, 5, 0)
+
+	'Get the frame size properties of the image's parent grid
+	XuiSendMessage (#GenGrid, #GetGridNumber, @mgrid, 0, 0, 0, 1, 0)
+	XgrGetImage (mgrid,@gridimage[])
+	XgrGetImageArrayInfo(@gridimage[], @bbp, @#gwidth, @#gheight)
+
+END FUNCTION
+'
+'
+'	###############################
+'	#####  Pictureshifter ()  #####
+'	###############################
+'
+'	"Anatomy of Grid Functions" in the GuiDesigner Programmer Guide
+'	describes the operation and modification of grid functions in detail.
+'
+'	WindowFromFunction and/or WindowToFunction may not work, or may not generate the desired results if you:
+'		* Modify the kid constant definition improperly.
+'		* Modify the code in the Create subroutine improperly.
+'		* Imbed blank or comment lines in the Create subroutine.
+'		* Remove the GOSUB Resize line in the Create subroutine (comment out is okay).
+'		* Imbed special purpose code in the Create subroutine before the GOSUB Resize line.
+'		* Delete any of the four lines that assign values to designX, designY, designWidth, designHeight.
+'
+FUNCTION  Pictureshifter (grid, message, v0, v1, v2, v3, r0, (r1, r1$, r1[], r1$[]))
+	STATIC  designX,  designY,  designWidth,  designHeight
+	STATIC  SUBADDR  sub[]
+	STATIC  upperMessage
+	STATIC  Pictureshifter
+'
+	$Pictureshifter  =   0  ' kid   0 grid type = Pictureshifter
+	$LBPictureArea   =   1  ' kid   1 grid type = XuiLabel
+	$LBX             =   2  ' kid   2 grid type = XuiLabel
+	$LBX2            =   3  ' kid   3 grid type = XuiLabel
+	$LBXdif          =   4  ' kid   4 grid type = XuiLabel
+	$LBY             =   5  ' kid   5 grid type = XuiLabel
+	$LBY2            =   6  ' kid   6 grid type = XuiLabel
+	$LBYdif          =   7  ' kid   7 grid type = XuiLabel
+	$XuiLabel726     =   8  ' kid   8 grid type = XuiLabel
+	$XuiLabel727     =   9  ' kid   9 grid type = XuiLabel
+	$XuiLabel728     =  10  ' kid  10 grid type = XuiLabel
+	$XuiLabel729     =  11  ' kid  11 grid type = XuiLabel
+	$XuiLabel730     =  12  ' kid  12 grid type = XuiLabel
+	$XuiLabel731     =  13  ' kid  13 grid type = XuiLabel
+	$UpperKid        =  13  ' kid maximum
+'
+'
+	IFZ sub[] THEN GOSUB Initialize
+'	XuiReportMessage (grid, message, v0, v1, v2, v3, r0, r1)
+	IF XuiProcessMessage (grid, message, @v0, @v1, @v2, @v3, @r0, @r1, Pictureshifter) THEN RETURN
+	IF (message <= upperMessage) THEN GOSUB @sub[message]
+	RETURN
+'
+'
+' *****  Callback  *****  message = Callback : r1 = original message
+'
+SUB Callback
+	message = r1
+	callback = message
+	IF (message <= upperMessage) THEN GOSUB @sub[message]
+END SUB
+'
+'
+' *****  Create  *****  v0123 = xywh : r0 = window : r1 = parent
+'
+SUB Create
+	IF (v0 <= 0) THEN v0 = 0
+	IF (v1 <= 0) THEN v1 = 0
+	IF (v2 <= 0) THEN v2 = designWidth
+	IF (v3 <= 0) THEN v3 = designHeight
+	XuiCreateGrid  (@grid, Pictureshifter, @v0, @v1, @v2, @v3, r0, r1, &Pictureshifter())
+	XuiSendMessage ( grid, #SetGridName, 0, 0, 0, 0, 0, @"Pictureshifter")
+	XuiLabel       (@g, #Create, 0, 0, 372, 220, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $LBPictureArea, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LBPictureArea")
+	XuiSendMessage ( g, #SetBorder, $$BorderLower1, $$BorderLower1, $$BorderNone, 0, 0, 0)
+	XuiLabel       (@g, #Create, 48, 228, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $LBX, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LBX")
+	XuiLabel       (@g, #Create, 48, 248, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $LBX2, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LBX2")
+	XuiLabel       (@g, #Create, 48, 268, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $LBXdif, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LBXdif")
+	XuiLabel       (@g, #Create, 192, 228, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $LBY, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LBY")
+	XuiLabel       (@g, #Create, 192, 248, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $LBY2, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LBY2")
+	XuiLabel       (@g, #Create, 192, 268, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $LBYdif, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LBYdif")
+	XuiLabel       (@g, #Create, 120, 228, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $XuiLabel726, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"XuiLabel726")
+	XuiSendMessage ( g, #SetBorder, $$BorderNone, $$BorderNone, $$BorderNone, 0, 0, 0)
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"Y")
+	XuiLabel       (@g, #Create, 120, 268, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $XuiLabel727, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"XuiLabel727")
+	XuiSendMessage ( g, #SetBorder, $$BorderNone, $$BorderNone, $$BorderNone, 0, 0, 0)
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"Ydif")
+	XuiLabel       (@g, #Create, 120, 248, 72, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $XuiLabel728, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"XuiLabel728")
+	XuiSendMessage ( g, #SetBorder, $$BorderNone, $$BorderNone, $$BorderNone, 0, 0, 0)
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"Y2")
+	XuiLabel       (@g, #Create, 0, 228, 48, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $XuiLabel729, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"XuiLabel729")
+	XuiSendMessage ( g, #SetBorder, $$BorderNone, $$BorderNone, $$BorderNone, 0, 0, 0)
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"X")
+	XuiLabel       (@g, #Create, 0, 248, 48, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $XuiLabel730, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"XuiLabel730")
+	XuiSendMessage ( g, #SetBorder, $$BorderNone, $$BorderNone, $$BorderNone, 0, 0, 0)
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"X2")
+	XuiLabel       (@g, #Create, 0, 268, 48, 20, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Pictureshifter(), -1, -1, $XuiLabel731, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"XuiLabel731")
+	XuiSendMessage ( g, #SetBorder, $$BorderNone, $$BorderNone, $$BorderNone, 0, 0, 0)
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"Xdif")
+	GOSUB Resize
+END SUB
+'
+'
+' *****  CreateWindow  *****  v0123 = xywh : r0 = windowType : r1$ = display$
+'
+SUB CreateWindow
+	IF (v0 == 0) THEN v0 = designX
+	IF (v1 == 0) THEN v1 = designY
+	IF (v2 <= 0) THEN v2 = designWidth
+	IF (v3 <= 0) THEN v3 = designHeight
+	XuiWindow (@window, #WindowCreate, v0, v1, v2, v3, r0, @r1$)
+	v0 = 0 : v1 = 0 : r0 = window : ATTACH r1$ TO display$
+	GOSUB Create
+	r1 = 0 : ATTACH display$ TO r1$
+	XuiWindow (window, #WindowRegister, grid, -1, v2, v3, @r0, @"Pictureshifter")
+END SUB
+'
+'
+' *****  GetSmallestSize  *****  see "Anatomy of Grid Functions"
+'
+SUB GetSmallestSize
+END SUB
+'
+'
+' *****  Redrawn  *****  see "Anatomy of Grid Functions"
+'
+SUB Redrawn
+	XuiCallback (grid, #Redrawn, v0, v1, v2, v3, r0, r1)
+END SUB
+'
+'
+' *****  Resize  *****  see "Anatomy of Grid Functions"
+'
+SUB Resize
+END SUB
+'
+'
+' *****  Selection  *****  see "Anatomy of Grid Functions"
+'
+SUB Selection
+END SUB
+'
+'
+' *****  Initialize  *****  see "Anatomy of Grid Functions"
+'
+SUB Initialize
+	XuiGetDefaultMessageFuncArray (@func[])
+	XgrMessageNameToNumber (@"LastMessage", @upperMessage)
+'
+	func[#Callback]           = &XuiCallback ()               ' disable to handle Callback messages internally
+' func[#GetSmallestSize]    = 0                             ' enable to add internal GetSmallestSize routine
+' func[#Resize]             = 0                             ' enable to add internal Resize routine
+'
+	DIM sub[upperMessage]
+'	sub[#Callback]            = SUBADDRESS (Callback)         ' enable to handle Callback messages internally
+	sub[#Create]              = SUBADDRESS (Create)           ' must be subroutine in this function
+	sub[#CreateWindow]        = SUBADDRESS (CreateWindow)     ' must be subroutine in this function
+'	sub[#GetSmallestSize]     = SUBADDRESS (GetSmallestSize)  ' enable to add internal GetSmallestSize routine
+	sub[#Redrawn]             = SUBADDRESS (Redrawn)          ' generate #Redrawn callback if appropriate
+'	sub[#Resize]              = SUBADDRESS (Resize)           ' enable to add internal Resize routine
+	sub[#Selection]           = SUBADDRESS (Selection)        ' routes Selection callbacks to subroutine
+'
+	IF sub[0] THEN PRINT "Pictureshifter() : Initialize : error ::: (undefined message)"
+	IF func[0] THEN PRINT "Pictureshifter() : Initialize : error ::: (undefined message)"
+	XuiRegisterGridType (@Pictureshifter, "Pictureshifter", &Pictureshifter(), @func[], @sub[])
+'
+' Don't remove the following 4 lines, or WindowFromFunction/WindowToFunction will not work
+'
+	designX = 388
+	designY = 146
+	designWidth = 372
+	designHeight = 304
+'
+	gridType = Pictureshifter
+	XuiSetGridTypeProperty (gridType, @"x",                designX)
+	XuiSetGridTypeProperty (gridType, @"y",                designY)
+	XuiSetGridTypeProperty (gridType, @"width",            designWidth)
+	XuiSetGridTypeProperty (gridType, @"height",           designHeight)
+	XuiSetGridTypeProperty (gridType, @"maxWidth",         designWidth)
+	XuiSetGridTypeProperty (gridType, @"maxHeight",        designHeight)
+	XuiSetGridTypeProperty (gridType, @"minWidth",         designWidth)
+	XuiSetGridTypeProperty (gridType, @"minHeight",        designHeight)
+	XuiSetGridTypeProperty (gridType, @"can",              $$Callback)
+	IFZ message THEN RETURN
+END SUB
+END FUNCTION
+'
+'
+' ###################################
+' #####  PictureshifterCode ()  #####
+' ###################################
+'
+'
+'	This small program demonstrates how you can use mouse coordinates
+' to shuffle with images on a label - grid.
+'
+' I was just fiddling around to have some usefull code for my own
+' application, i think others might have use of this basics too.
+'
+'	May 6th 2000
+' Vincent Voois
+'
+FUNCTION  PictureshifterCode (grid, message, v0, v1, v2, v3, kid, r1)
+'
+	$Pictureshifter  =   0  ' kid   0 grid type = Pictureshifter
+	$LBPictureArea   =   1  ' kid   1 grid type = XuiLabel
+	$LBX             =   2  ' kid   2 grid type = XuiLabel
+	$LBX2            =   3  ' kid   3 grid type = XuiLabel
+	$LBXdif          =   4  ' kid   4 grid type = XuiLabel
+	$LBY             =   5  ' kid   5 grid type = XuiLabel
+	$LBY2            =   6  ' kid   6 grid type = XuiLabel
+	$LBYdif          =   7  ' kid   7 grid type = XuiLabel
+	$XuiLabel726     =   8  ' kid   8 grid type = XuiLabel
+	$XuiLabel727     =   9  ' kid   9 grid type = XuiLabel
+	$XuiLabel728     =  10  ' kid  10 grid type = XuiLabel
+	$XuiLabel729     =  11  ' kid  11 grid type = XuiLabel
+	$XuiLabel730     =  12  ' kid  12 grid type = XuiLabel
+	$XuiLabel731     =  13  ' kid  13 grid type = XuiLabel
+	$UpperKid        =  13  ' kid maximum
+	UBYTE gridimage[]
+	STATIC GraphicGrid, I, oldCursor
+'
+'	XuiReportMessage (grid, message, v0, v1, v2, v3, kid, r1)
+	IF (message = #Callback) THEN message = r1
+	GOSUB Initialize
+'
+	SELECT CASE message
+		CASE #CloseWindow	:	QUIT(0)
+		CASE #WindowMouseDown	:	GOSUB MouseDown
+		CASE #WindowMouseDrag	:	GOSUB MouseDrag
+		CASE #WindowMouseEnter	:	GOSUB MouseEnterEvent
+		CASE #WindowMouseExit	:	GOSUB MouseExitEvent
+		CASE #WindowMouseUp	:	#DragReady = $$FALSE
+		CASE #WindowMouseMove :	GOSUB MouseMove
+	END SELECT
+	RETURN
+
+SUB Initialize
+
+' XuiGetGridNumber() gets the grid number for kid $LBPictureArea as follows:
+
+	XuiSendMessage (grid, #GetGridNumber, @GraphicGrid, 0, 0, 0, $LBPictureArea, 0)
+
+END SUB
+' ***** MouseEnterEvent *****
+SUB MouseEnterEvent
+'check if mouse is inside labelArea grid
+	XgrGetMouseInfo ( @window, @mgrid, @xWin, @yWin, @state, @time )
+	XuiSendMessage (#GenGrid, #GetGridNumber, @kidgrid, 0, 0, 0, 1, 0)
+	XuiSendMessage (#GenGrid, #GetGridNumber, @maingridpart, 0, 0, 0, 3, 0)
+
+
+'Change cursor to "Crosshair" style if the translated gridnumber matches the current
+'mouse-focussed gridnumber
+	SELECT CASE mgrid
+		CASE kidgrid
+			#InArea = $$TRUE
+
+'		XuiSendMessage (mgrid, #GetCursor, @oldCursor, 0, 0, 0, 0, 0)
+
+'Don't change it while Dragmode is still on!
+			IF #DragReady == $$FALSE THEN
+				XuiSendMessage (mgrid, #SetCursor, #cursorCrosshair, 0, 0, 0, 0, 0)
+			END IF
+		CASE #GenGrid, maingridpart
+			#DragWindowArea = $$TRUE
+			IF #DragReady == $$FALSE THEN
+				XuiSendMessage (mgrid, #SetCursor, 9, 0, 0, 0, 0, 0)
+			END IF
+
+	END SELECT
+
+END SUB
+' ***** MouseExitEvent *****
+SUB MouseExitEvent
+
+'check if mouse is inside labelArea grid
+	XgrGetMouseInfo ( @window, @mgrid, @xWin, @yWin, @state, @time )
+
+'Get kid grid number of the focus-grid
+	XuiSendMessage( #GenGrid, #GetGridNumber, @kidgrid, 0, 0, 0, 1, 0)
+
+'Change cursor back to default
+
+  IF mgrid <> kidgrid THEN
+			#InArea = $$FALSE
+
+'Don't change it while Dragmode is still on!
+		IF (#DragReady == $$FALSE) THEN
+			XuiSendMessage (kidgrid, #SetCursor, #cursorDefault, 0, 0, 0, 0, 0)
+		END IF
+
+	END IF
+
+	XuiSendMessage (#GenGrid, #GetGridNumber, @maingridpart, 0, 0, 0, 3, 0)
+
+  IF (mgrid <> maingridpart) AND (mgrid <> #GenGrid) THEN
+			#DragWindowArea = $$FALSE
+
+'Don't change it while Dragmode is still on!
+		IF (#DragReady == $$FALSE) THEN
+			XuiSendMessage (kidgrid, #SetCursor, #cursorDefault, 0, 0, 0, 0, 0)
+		END IF
+
+	END IF
+
+END SUB
+SUB MouseDown
+	'If mousepointer is in the label grid
+	SELECT CASE $$TRUE
+		CASE #InArea
+			XgrGetMouseInfo ( @window, @mgrid, @xWin, @yWin, @state, @time )
+
+			'Get the image location and area cover
+			XuiSendMessage (mgrid, #GetImage, @img,0,@xind,@yind,0,0)
+			XuiSendMessage (mgrid, #GetImageCoords, @iv0,@iv1,@iv2,@iv3,0,0)
+
+			'If the mousepointer is within the image area, enable dragmode
+			IF (xWin >= (iv0+xind)) AND (xWin <= (iv2+xind)) AND (yWin >= (iv1+yind)) AND (yWin <= (iv3+yind)) AND (#DragReady == $$FALSE) THEN
+				XgrGetMouseInfo ( @window, @mgrid, @xPin, @yPin, @state, @time )
+				XuiSendMessage (mgrid, #GetImage, @img,0,@xind,@yind,0,0)
+
+				'Determine the distance between mousepointer and image offset
+				#xpPin = xPin - xind
+				#ypPin = yPin - yind
+
+				#DragReady = $$TRUE
+			ELSE
+				#DragReady = $$FALSE
+			END IF
+
+		CASE #DragWindowArea
+			IF #DragReady == $$FALSE THEN
+				'	Spike the current cursor position
+				XgrGetMouseInfo ( @window, @mgrid, @#xPin, @#yPin, @state, @time )
+
+				#DragReady = $$TRUE
+			END IF
+
+
+	END SELECT
+
+END SUB
+SUB MouseDrag
+	'If the mousepointer is in the coordinate area where the image is or the window frame area
+	'then drag it.
+
+	IF (#DragReady == $$TRUE) THEN
+		SELECT CASE $$TRUE
+
+			CASE #InArea
+				XgrGetMouseInfo ( @window, @mgrid, @xWin, @yWin, @state, @time )
+
+				'Mouse button is not being pushed anymore, you can stop dragging the picture.
+				IFZ state THEN
+					#DragReady = $$FALSE
+
+					EXIT SUB
+				ENDIF
+
+				'Get offset coordinates of the current image position
+				XuiSendMessage (mgrid, #GetImage, @img,0,@xind,@yind,0,0)
+
+				'Determine relative offsets and display them in the boxes
+				lbx$ = STRING(xind - (#gwidth / 2) + (#pwidth / 2))
+				lby$ = STRING(yind - (#gheight / 2) + (#pheight/ 2))
+				#ltx = XLONG(lbx$)
+				#lty = XLONG(lby$)
+				XuiSendMessage (#GenGrid, #SetTextString, 0, 0, 0, 0, $LBX2, lbx$)
+				XuiSendMessage (#GenGrid, #SetTextString, 0, 0, 0, 0, $LBY2, lby$)
+
+				'As long as the mousepointer is within the grid-frame, drag the image
+				IF (xWin >= 0) AND (xWin <= #gwidth) AND (yWin >= 0) AND (yWin <= #gheight) THEN
+					'Keep the distance between mousepointer and image offset steady
+					Xpdif = xWin - #xpPin
+					Ypdif = yWin - #ypPin
+					XDif$ = STRING(Xpdif)
+					YDif$ = STRING(Ypdif)
+
+					'Move the image to the relative new coordinates within the target grid
+
+
+					'Move the image to the new coordinates within the window
+					XuiSendMessage (#GenGrid, #SetImage, 0, 0, Xpdif, Ypdif, 1, @#Picture$)
+					XuiSendMessage (#GenGrid, #SetImageCoords, 0, 0, #pwidth, #pheight, 1,0)
+					XuiSendMessage (#GenGrid, #SetTextString, 0, 0, 0, 0, $LBXdif, XDif$)
+					XuiSendMessage (#GenGrid, #SetTextString, 0, 0, 0, 0, $LBYdif, YDif$)
+					XuiSendMessage (#GenGrid, #RedrawGrid, 1, 1, 370, 218, 1, 0)
+					XuiSendMessage (#GenGrid, #RedrawGrid, 3, 3, 58, 14, $LBX2, 0)
+					XuiSendMessage (#GenGrid, #RedrawGrid, 3, 3, 58, 14, $LBY2, 0)
+					XuiSendMessage (#GenGrid, #RedrawGrid, 3, 3, 58, 14, $LBXdif, 0)
+					XuiSendMessage (#GenGrid, #RedrawGrid, 3, 3, 58, 14, $LBYdif, 0)
+				END IF
+
+			CASE #DragWindowArea
+				XgrGetMouseInfo ( @window, @mgrid, @xWin, @yWin, @state, @time )
+				'Mouse button is not being pushed anymore, you can stop dragging the window.
+				IFZ state THEN
+					#DragReady = $$FALSE
+
+					EXIT SUB
+				ENDIF
+
+				'As long as
+				'Get current position
+				XgrGetWindowPositionAndSize ( window, @xaDisp, @yaDisp, @width, @height )
+				Xdif = xaDisp + (xWin - #xPin)
+				Ydif = yaDisp + (yWin - #yPin)
+				'Set new position
+				XgrSetWindowPositionAndSize ( window, Xdif, Ydif, -1, -1 )
+
+
+		END SELECT
+
+	END IF
+END SUB
+SUB MouseMove
+	'This routine changes the mousepointer shape depending browsing across what area
+	'In this case, it gets the sizes of the picture and location and as soon as the pointer is
+	'within the picture area, the mousepointer changes.
+
+	IF #InArea == $$TRUE THEN
+		XgrGetMouseInfo ( @window, @mgrid, @xWin, @yWin, @state, @time )
+		'Get the image location and area cover
+		XuiSendMessage (mgrid, #GetImage, @img,0,@xind,@yind,0,0)
+		XuiSendMessage (mgrid, #GetImageCoords, @iv0,@iv1,@iv2,@iv3,0,0)
+
+		'If the mousepointer is within the image area, enable dragmode
+		IF (xWin >= (iv0+xind)) AND (xWin <= (iv2+xind)) AND (yWin >= (iv1+yind)) AND (yWin <= (iv3+yind)) THEN
+			XuiSendMessage (mgrid, #GetCursor, @mcursor, 0, 0, 0, 0, 0)
+
+			IF mcursor <> 9 THEN
+				'Both lines below seem to be a double up, but it's required to have the
+				'cursor really changed!
+				XgrSetCursor (9, @oldy)
+				XuiSendMessage (mgrid, #SetCursor, 9, 0, 0, 0, 0, 0)
+			END IF
+
+		ELSE
+			XuiSendMessage (mgrid, #GetCursor, @mcursor, 0, 0, 0, 0, 0)
+
+			IF mcursor <> #cursorCrosshair THEN
+				'Both lines below seem to be a double up, but it's required to have the
+				'cursor really changed!
+				XgrSetCursor (#cursorCrosshair, @oldy)
+				XuiSendMessage (mgrid, #SetCursor, #cursorCrosshair, 0, 0, 0, 0, 0)
+			END IF
+
+		END IF
+
+	END IF
+
+END SUB
+
+
+END FUNCTION
+END PROGRAM
+„Tom Stout                      Flying Ball Demo               vvacme@worldonline.nl          06-15-01 (19:34)       XBASIC                 1    8479     Ball.x      '
+'
+' ####################
+' #####  PROLOG  #####
+' ####################
+'
+PROGRAM	"balls"  ' 1-8 char program/file name without .x or any .extent
+VERSION	"1.0001"    ' version number - increment before saving altered program
+'
+' A bunch of balls flying around bumping into each other
+' Love to see someone double buffer this.
+' By Tom Stout
+' 
+'
+	IMPORT	"xma"   ' Math library     : SIN/ASIN/SINH/ASINH/LOG/EXP/SQRT...
+'	IMPORT	"xcm"   ' Complex library  : complex number library  (trig, etc)
+	IMPORT	"xst"   ' Standard library : required by most programs
+	IMPORT	"xgr"   ' GraphicsDesigner : required by GuiDesigner programs
+'	IMPORT	"xui"   ' GuiDesigner      : required by GuiDesigner programs
+'
+
+TYPE BALL
+  XLONG .xCen
+  XLONG .yCen
+  XLONG .xDir
+  XLONG .yDir
+  XLONG .color
+END TYPE
+
+
+
+DECLARE FUNCTION  Entry ()
+'
+'Functions used by xbRandom
+DECLARE FUNCTION  VOID   Seed (ULONG seed)
+DECLARE FUNCTION  ULONG  Randomise ()
+DECLARE FUNCTION  ULONG  Random ()
+DECLARE FUNCTION  DOUBLE Uniform ()
+DECLARE FUNCTION  SLONG  RandRange (SLONG a , SLONG b)
+DECLARE FUNCTION  ULONG  Dice (ULONG n)
+DECLARE FUNCTION  RandList(count , lo , hi , @list[])
+'
+'
+' ######################
+' #####  Entry ()  #####
+' ######################
+'
+' Programs contain:
+'   1. A PROLOG with type/function/constant declarations.
+'   2. This Entry() function where execution begins.
+'   3. Zero or more additional functions.
+'
+FUNCTION  Entry ()
+
+  BALL ball[]
+ DIM ball [500]
+	x = 0
+	y = 0
+	ww = 800   ' Pixel dimension x
+	hh = 600   ' Pixel dimension y
+	t=1
+
+
+	XgrCreateWindow (@window0, t, x, y, ww, hh, 0, "")
+	XgrCreateGrid (@grid0, 0, 0, 0, ww, hh, window0, 0, 0)
+	XgrDisplayWindow (window0)
+  XgrClearGrid (grid0, $$Black)
+
+
+numBalls = 75
+radius = 4
+
+
+Randomise()
+
+FOR i = 0 TO numBalls - 1
+' place ball
+  ball[i].xCen = RandRange (radius,800-radius)
+  ball[i].yCen = RandRange (radius,600-radius)
+
+' color ball
+  color = RandRange (1,4)
+  SELECT CASE color
+    CASE 1  ball[i].color = 100
+    CASE 2  ball[i].color = 120
+    CASE 3  ball[i].color = 20
+    CASE 4  ball[i].color = 4
+  END SELECT
+
+  'give them their slope
+  dir = RandRange(1,6)
+  SELECT CASE dir
+    CASE 1   ball[i].xDir = 1
+    CASE 2   ball[i].xDir = -1
+    CASE 3   ball[i].xDir =  2
+    CASE 4   ball[i].xDir = -2
+    CASE 5   ball[i].xDir = 3
+    CASE 6   ball[i].xDir = -3
+  END SELECT
+
+  dir = RandRange(1,6)
+  SELECT CASE dir
+    CASE 1   ball[i].yDir = 1
+    CASE 2   ball[i].yDir = -1
+    CASE 3   ball[i].yDir =  2
+    CASE 4   ball[i].yDir = -2
+    CASE 5   ball[i].yDir = 3
+    CASE 6   ball[i].yDir = -3
+  END SELECT
+
+
+NEXT i
+
+' let them fly
+DO
+
+'Couldn't figure out how to jump out of this infinite loop,
+'too embarassed to ask!
+INC counter
+IF counter = 1000 THEN QUIT(0)
+
+
+'Draw the balls
+FOR i = 0 TO numBalls - 1
+  XgrSetDrawpoint(grid0,ball[i].xCen,ball[i].yCen)
+  XgrDrawCircle(grid0,ball[i].color,radius)
+NEXT i
+
+'Takes some of the studdering out
+  XstSleep(5)
+
+'Make it black, make it gone
+FOR i = 0 TO numBalls - 1
+  XgrSetDrawpoint(grid0,ball[i].xCen,ball[i].yCen)
+  XgrDrawCircle(grid0,$$Black,radius)
+NEXT i
+
+
+FOR i = 0 TO numBalls - 1
+
+'Check and see if we have colliding balls
+'reverse he slope
+  FOR i2 = 0 TO numBalls - 1
+    IF i2 = i THEN DO NEXT
+    dx = ABS(ball[i2].xCen - ball[i].xCen)
+    dy = ABS(ball[i2].yCen - ball[i].yCen)
+    distance = SQRT(dx*dx + dy*dy)
+    IF distance <= radius * 2 THEN
+      ball[i].xDir = ball[i].xDir * -1
+      ball[i].yDir = ball[i].yDir * -1
+      ball[i2].xDir = ball[i2].xDir * -1
+      ball[i2].yDir = ball[i2].yDir * -1
+    END IF
+  NEXT i2
+  ball[i].xCen = ball[i].xCen + ball[i].xDir
+  ball[i].yCen = ball[i].yCen + ball[i].yDir
+  IF ball[i].xCen > 800 THEN ball[i].xDir = ball[i].xDir * -1
+  IF ball[i].yCen > 600 THEN ball[i].yDir = ball[i].yDir * -1
+  IF ball[i].xCen < 0 THEN ball[i].xDir = ball[i].xDir * -1
+  IF ball[i].yCen < 0 THEN ball[i].yDir = ball[i].yDir * -1
+NEXT i
+'A failed attempt to try and exit using a mouse click
+'XgrGetMouseInfo (window0, grid0, @mx, @my, @state, @time)
+'IF state = 16777216 && mx > 0 THEN QUIT(0)
+'PRINT mx
+
+
+
+LOOP
+
+
+
+END FUNCTION
+'
+FUNCTION  Seed (ULONG seed)
+'
+'AUTHOR OF FUNCTION: Vic Drastic
+'                    vicdrastik@xbasic.org
+'
+' Seed() initialises the Mersenne Twister state array m[]
+' with a sequence starting with the value seed.
+' Exception : If seed is zero , state array is randomly initialised.
+
+SHARED /MersenneTwister/ XLONG m[] , index
+XLONG i
+
+'
+' first , check the seed. If zero , initialise to a time-dependent value and exit.
+'
+IFZ seed THEN Randomise() : EXIT FUNCTION
+
+
+'
+' next, check if state array m[] has been dimensioned. If not , DIM it.
+'
+IFZ m[] THEN DIM m[623]
+
+
+'
+' finally , use Knuth LC RNG p102 Volume 2
+' to initialise the m[] array from the given seed.
+'
+m[0] = XLONG(seed)
+FOR i = 1 TO 623
+  m[i] = 69069 * m[i-1]
+NEXT i
+
+' force immediate refresh
+index = 624
+END FUNCTION
+'
+FUNCTION ULONG Randomise ()
+'
+'AUTHOR OF FUNCTION: Vic Drastic
+'                    vicdrastik@xbasic.org
+'
+' This initialises the Mersenne Twister to a time-dependent value.
+' Actual seed used is returned as a ULONG.
+
+SHARED /MersenneTwister/ XLONG m[] , index
+XLONG year , month , day , weekDay , hour , minute , second , nsec
+GIANT centis , m
+XLONG seed
+
+' get the current time in centiseconds since year 0
+XstGetDateAndTime ( @year, @month, @day, @weekDay, @hour, @minute, @second, @nsec )
+centis = (nsec\10000000)+100*(second+60*(minute+60*(hour+24*(day+31*(month+12*GIANT(year))))))
+m = 4294967295
+seed = XLONG(1 + ULONG(centis MOD m))
+
+' next, check if state array m[] has been dimensioned. If not , DIM it.
+IFZ m[] THEN DIM m[623]
+
+m[0] = seed
+FOR i = 1 TO 623
+  m[i] = 69069 * m[i-1]
+NEXT i
+
+' force immediate refresh
+index = 624
+
+' finally , return the actual seed used.
+RETURN ULONG(seed)
+END FUNCTION
+'
+FUNCTION ULONG Random ()
+'
+'AUTHOR OF FUNCTION: Vic Drastic
+'                    vicdrastik@xbasic.org
+'
+' This uses the state array m[] to generate the next random number.
+
+SHARED /MersenneTwister/ XLONG m[] , index
+XLONG y , i
+$uMask = 0b10000000000000000000000000000000
+$lMask = 0b01111111111111111111111111111111
+$magic = 0x9908B0DF
+$tmb   = 0x9D2C5680
+$tmc   = 0xEFC60000
+
+' check if the m[] array needs to be refreshed
+IF index==624 THEN GOSUB Refresh
+
+' now grab the next m[] value
+y = m[index]
+
+' update the index ,
+INC index
+
+' and scramble y a bit to make the next random number
+y = y XOR ( (y>>11)          )
+y = y XOR ( (y<< 7) AND $tmb )
+y = y XOR ( (y<<15) AND $tmc )
+y = y XOR ( (y>>18)          )
+RETURN ULONG(y)
+
+SUB Refresh
+' generate 624 new m[] values
+FOR i = 0 TO 226
+  y = ( m[i] AND $uMask ) OR ( m[i+1] AND $lMask )
+  SELECT CASE (y AND 1)
+    CASE 0 : m[i] = m[i+397] XOR (y>>1)
+    CASE 1 : m[i] = m[i+397] XOR (y>>1) XOR $magic
+  END SELECT
+NEXT i
+
+FOR i = 227 TO 622
+  y = ( m[i] AND $uMask ) OR ( m[i+1] AND $lMask )
+  SELECT CASE (y AND 1)
+    CASE 0 : m[i] = m[i-227] XOR (y>>1)
+    CASE 1 : m[i] = m[i-227] XOR (y>>1) XOR $magic
+  END SELECT
+NEXT i
+
+y = ( m[623] AND $uMask ) OR ( m[0] AND $lMask )
+SELECT CASE (y AND 1)
+  CASE 0 : m[623] = m[396] XOR (y>>1)
+  CASE 1 : m[623] = m[396] XOR (y>>1) XOR $magic
+END SELECT
+
+' reset the index
+index = 0
+END SUB
+
+END FUNCTION
+'
+FUNCTION DOUBLE Uniform ()
+'
+'AUTHOR OF FUNCTION: Vic Drastic
+'                    vicdrastik@xbasic.org
+'
+' Uniform() converts a discrete ULONG random integer to a
+' continuous uniform DOUBLE real value in the range (0,1)
+' Note : The result is always non-zero and non-unary.
+
+RETURN ( 0.5# + Random() )/4294967296#
+END FUNCTION
+'
+FUNCTION SLONG RandRange (SLONG a , SLONG b)
+'
+'AUTHOR OF FUNCTION: Vic Drastic
+'                    vicdrastik@xbasic.org
+'
+' RandRange returns a value chosen randomly from the closed interval [a,b]
+' RandRange(1,6) would give a random die roll.
+
+RETURN SLONG( INT( a + (b - a + 1) * Uniform() ) )
+END FUNCTION
+'
+FUNCTION ULONG Dice(ULONG n)
+'
+'AUTHOR OF FUNCTION: Vic Drastic
+'                    vicdrastik@xbasic.org
+'
+' Dice() returns the sum of the face values of n randomly thrown dice
+
+ULONG sum , i
+
+sum = 0
+FOR i = 1 TO n
+  sum = sum + RandRange(1,6)
+NEXT i
+
+RETURN sum
+
+
+END FUNCTION
+FUNCTION RandList(count , lo , hi , @list[])
+  arrayNum = count - 1
+  DIM list[arrayNum]
+  element = 0
+
+  DO WHILE element <= arrayNum
+    numTest = RandRange(lo,hi)
+    FOR i = 0 TO arrayNum
+      IF list[i] = numTest THEN
+        DO DO
+      END IF
+    NEXT i
+    list[element] = numTest
+    INC element
+  LOOP
+
+END FUNCTION
+END PROGRAM
+„Vincent Voois                  Date-Time Formter              vvacme@worldonline.nl          06-15-01 (19:34)       XBASIC                 1    4706     Dateandt.x  '
+'
+' ####################
+' #####  PROLOG  #####
+' ####################
+'
+PROGRAM	"DateandTime"  ' 1-8 char program/file name without .x or any .extent
+VERSION	"1.0000"    ' version number - increment before saving altered program
+'
+' A simple Date and Time formatter for those who miss TIME$ and DATE$ options.
+' This little code contains those sort of functions. The Entry() functions displays
+' a couple of example lines and explanations.
+'
+' Vincent Voois
+'
+'
+' ******  Comment libraries in/out as needed  *****
+'
+'	IMPORT	"xma"   ' Math library     : SIN/ASIN/SINH/ASINH/LOG/EXP/SQRT...
+'	IMPORT	"xcm"   ' Complex library  : complex number library  (trig, etc)
+	IMPORT	"xst"   ' Standard library : required by most programs
+'	IMPORT	"xgr"   ' GraphicsDesigner : required by GuiDesigner programs
+'	IMPORT	"xui"   ' GuiDesigner      : required by GuiDesigner programs
+'
+
+DECLARE FUNCTION  Entry ()
+DECLARE FUNCTION  TIME$ (mode)
+DECLARE FUNCTION  DATE$ (format$)
+'
+'
+' ######################
+' #####  Entry ()  #####
+' ######################
+'
+' Programs contain:
+'   1. A PROLOG with type/function/constant declarations.
+'   2. This Entry() function where execution begins.
+'   3. Zero or more additional functions.
+'
+FUNCTION  Entry ()
+		' abb			stands for
+		'	dn			Day Name		(Sunday, Monday...)
+		'	df			Day Figure	(1st, 2nd, 3rd...)
+		' mn			Month Name	(July, August, September,...)
+		' yy/yyyy	Year				(70, 80, .. / 1970, 1980,....)
+		' TIME$ returns a string depending on the mode:12 is 12 hours mode, anything else is 24 hours mode
+		
+		XstClearConsole()
+		PRINT TIME$(0)
+		PRINT TIME$(12)
+		PRINT DATE$("dn the df, mn, yyyy")
+		PRINT DATE$("yy-mm-dd")
+		PRINT DATE$("dn, dd/mm/yyyy")
+		PRINT "Day one : "; DATE$("dn, df "); TIME$(12); " CET"
+
+END FUNCTION
+'
+'
+' ######################
+' #####  TIME$ ()  #####
+' ######################
+'
+FUNCTION  TIME$ (mode)
+	XstGetLocalDateAndTime (@year, @month, @day, @weekDay, @hour, @minute, @second, @nsec)
+
+	SELECT CASE mode
+
+		CASE 12
+
+			IF hour > 12 THEN
+				hour = hour - 12
+			END IF
+
+		CASE 24
+
+		CASE ELSE
+			'Default is 24 hours
+
+	END SELECT
+
+	hour$ = TRIM$(STR$(hour))
+	minute$ = TRIM$(STR$(minute))
+	second$ = TRIM$(STR$(second))
+
+	IF (SIZE(hour$) < 2) AND (mode <> 12) THEN
+		hour$ = "0" + hour$
+	END IF
+
+	IF SIZE(minute$)< 2 THEN
+		minute$ = "0" + minute$
+	END IF
+
+	IF SIZE(second$)< 2 THEN
+		second$ =  "0" + second$
+	END IF
+
+	Temp$ =  hour$ + ":" + minute$ + ":" + second$
+
+	RETURN Temp$
+
+END FUNCTION
+'
+'
+' ######################
+' #####  DATE$ ()  #####
+' ######################
+'
+FUNCTION  DATE$ (format$)
+
+	XstGetLocalDateAndTime (@year, @month, @day, @weekDay, @hour, @minute, @second, @nsec)
+
+	year$ = TRIM$(STR$(year))
+	month$ = TRIM$(STR$(month))
+	day$ = 	TRIM$(STR$(day))
+
+	GOSUB SetDayName
+	GOSUB SetDayFigure
+	GOSUB SetMonthName
+
+	IF INSTRI(format$, "dd") THEN
+		format$ = XstMergeStrings$(format$, day$, INSTRI(format$, "dd"), 2)
+	END IF
+
+	IF INSTRI(format$, "mm") THEN
+		format$ = XstMergeStrings$(format$, month$, INSTRI(format$, "mm"), 2)
+	END IF
+
+	IF INSTRI(format$, "yyyy") THEN
+		format$ = XstMergeStrings$(format$, year$, INSTRI(format$, "yyyy"), 4)
+	ELSE
+
+		IF INSTRI(format$, "yy") THEN
+			format$ = XstMergeStrings$(format$, RIGHT$(year$,2), INSTRI(format$, "yy"), 2)
+		END IF
+
+	END IF
+
+	IF INSTRI(format$, "mn") THEN
+		format$ = XstMergeStrings$(format$, monthname$, INSTRI(format$, "mn"), 2)
+	END IF
+
+	IF INSTRI(format$, "dn") THEN
+		format$ = XstMergeStrings$(format$, dayname$, INSTRI(format$, "dn"), 2)
+	END IF
+
+	IF INSTRI(format$, "df") THEN
+		format$ = XstMergeStrings$(format$, dayfigure$, INSTRI(format$, "df"), 2)
+	END IF
+
+
+	RETURN format$
+
+
+SUB SetDayFigure
+
+	SELECT CASE RIGHT$(day$,1)
+
+		CASE "1"
+			dayfigure$ = day$+ "st"
+
+		CASE "2"
+			dayfigure$ = day$+ "nd"
+
+		CASE "3"
+			dayfigure$ = day$+ "rd"
+
+		CASE "0", "4", "5", "6", "7", "8", "9"
+			dayfigure$ = day$+ "th"
+
+	END SELECT
+
+END SUB
+
+SUB SetDayName
+
+	SELECT CASE weekDay
+
+		CASE 0
+			dayname$ = "Sunday"
+
+		CASE 1
+			dayname$ = "Monday"
+
+		CASE 2
+			dayname$ = "Tuesday"
+
+		CASE 3
+			dayname$ = "Wednesday"
+
+		CASE 4
+			dayname$ = "Thursday"
+
+		CASE 5
+			dayname$ = "Friday"
+
+		CASE 6
+			dayname$ = "Saturday"
+
+	END SELECT
+
+END SUB
+
+SUB SetMonthName
+
+	SELECT CASE month
+
+		CASE 1
+			monthname$ = "January"
+
+		CASE 2
+			monthname$ = "February"
+
+		CASE 3
+			monthname$ = "March"
+
+		CASE 4
+			monthname$ = "April"
+
+		CASE 5
+			monthname$ = "May"
+
+		CASE 6
+			monthname$ = "June"
+
+		CASE 7
+			monthname$ = "July"
+
+		CASE 8
+			monthname$ = "August"
+
+		CASE 9
+			monthname$ = "September"
+
+		CASE 10
+			monthname$ = "October"
+
+		CASE 11
+			monthname$ = "November"
+
+		CASE 12
+			monthname$ = "December"
+
+	END SELECT
+
+END SUB
+
+END FUNCTION
+END PROGRAM
+„Achilles Mina
+                 Graphical Font                 vvacme@worldonline.nl          06-15-01 (19:34)       XBASIC                 1    1549     Dog.x       ' ####################
+' #####  PROLOG  #####
+' ####################
+'
+' By Achilles Mina
+' A graphical font Example.
+'
+PROGRAM	"DOG"
+
+	IMPORT	"xst"
+	IMPORT	"xgr"
+
+	DECLARE FUNCTION  Dog ()
+
+' ####################
+' #####  Dog ()  #####
+' ####################
+
+
+FUNCTION  Dog ()
+UBYTE color, w, h, start, fin, inc, trick, woof
+
+	XgrGetDisplaySize ("", @#displayWidth, @#displayHeight,@#windowBorderWidth, @#windowTitleHeight)
+	w = (#displayWidth/2) - #windowBorderWidth - #windowBorderWidth
+	h = (#displayHeight/2) - #windowBorderWidth - #windowBorderWidth -#windowTitleHeight
+	XgrCreateWindow (@window, 0, 200, 150, w, h, 0, "")
+
+	XgrSetWindowTitle (window, @"Dog")
+	XgrCreateGrid (@grid, 0, 0, 0, w, h, window, 0, 0)
+	XgrDisplayWindow (window)
+	XgrClearGrid (grid, $$BrightBlue)
+	start = 0 :	fin	= 500	:	inc = 50	:	color = $$BrightYellow
+
+	FOR trick = 1 TO 2
+		FOR dog = start TO fin STEP inc
+			XgrCreateFont (@font, @"Courier", 400, 700, 0, dog)
+			XgrSetGridFont (grid, font)
+			XgrSetDrawpoint(grid,70,200)
+			XgrDrawText (grid, color, @"OLD DOGS CAN JUMP")
+			XstSleep(35)
+		NEXT
+		start = 500	:	fin = 0	:	inc = -50	:	color = $$White
+		XstSleep(100)
+	NEXT
+
+	XstSleep(100)
+	XgrClearGrid (grid, $$BrightBlue)
+	XgrSetDrawpoint(grid,70,200)
+	XgrDrawText (grid, $$White, @"OLD DOGS CAN JUMP")
+	XstSleep(300)
+
+	FOR woof = 1 TO 2
+		XgrSetDrawpoint(grid,290,200)
+		XgrDrawText (grid, $$BrightYellow, @"Woof!")
+		XstSleep(300)
+		XgrSetDrawpoint(grid,290,200)
+		XgrDrawText (grid, $$BrightBlue, @"Woof!")
+		XstSleep(300)
+	NEXT
+END FUNCTION
+END PROGRAM
+„Vincent Voois                  HTML Tag Stripper              vvacme@worldonline.nl          06-15-01 (19:34)       XBASIC                 1    7591     Htmlstri.x  '
+'
+' ####################
+' #####  PROLOG  #####
+' ####################
+'
+PROGRAM	"htmlTagStripper"  ' 1-8 char program/file name without .x or any .extent
+VERSION	"1.0000"    ' version number - increment before saving altered program
+'
+' This text manipulator strips html tags out of HTML pages to make them readable
+' within text-applications
+'
+' Done by Vincent Voois
+'
+'
+' ******  Comment libraries in/out as needed  *****
+'
+'	IMPORT	"xma"   ' Math library     : SIN/ASIN/SINH/ASINH/LOG/EXP/SQRT...
+'	IMPORT	"xcm"   ' Complex library  : complex number library  (trig, etc)
+	IMPORT	"xst"   ' Standard library : required by most programs
+'	IMPORT	"xgr"   ' GraphicsDesigner : required by GuiDesigner programs
+'	IMPORT	"xui"   ' GuiDesigner      : required by GuiDesigner programs
+'
+TYPE LITERAL
+	XLONG	.Start
+	XLONG	.End
+END TYPE
+
+DECLARE FUNCTION  Entry ()
+DECLARE FUNCTION  RemoveTags (data$)
+DECLARE FUNCTION  GetLiterals (data$)
+
+LITERAL #Literals[-1]
+'
+'
+' ######################
+' #####  Entry ()  #####
+' ######################
+'
+' Programs contain:
+'
+'   Simply a small demonstration program to quickly remove HTML-tags from within HTML files.
+'   It does not work when tags are spread across more lines than one!
+'
+FUNCTION  Entry ()
+STATIC HtmlLines
+STATIC TLiterals$[]
+
+SaveFile$ = "e:/html/ds1.ohe"
+ReadFile$ = "e:/html/test.html"
+
+	XstClearConsole()
+
+	XstLoadStringArray(ReadFile$, @HtmlArray$[])
+
+	data$ = ""
+
+FOR HtmlLines = 0 TO UBOUND(HtmlArray$[])
+	data$ = HtmlArray$[HtmlLines]
+
+	MyError = GetLiterals(@data$)
+
+	IF MyError THEN
+		PRINT #MCError$
+	END IF
+
+
+'##############################################################################
+'remove all literals so that scanning variables, commands and values are easier
+'##############################################################################
+
+	IF UBOUND(#Literals[]) > -1 THEN
+		REDIM TLiterals$[UBOUND(#Literals[])]
+
+		FOR X = 0 TO UBOUND(#Literals[])
+
+			IF (#Literals[X].End-1-#Literals[X].Start) > 0  THEN
+				TLiterals$[X] = MID$(data$, #Literals[X].Start + 1, #Literals[X].End-1-#Literals[X].Start)
+			ELSE
+				TLiterals$[X] = ""
+			END IF
+
+		NEXT X
+
+		FOR X = 0 TO UBOUND(TLiterals$[])
+			Replace = SIZE(TLiterals$[X]) + 2
+
+			LocateLiteral$ = CHR$(34) + TLiterals$[X] + CHR$(34)
+
+			Start = INSTR(data$, LocateLiteral$)
+
+			Add$ = "^L" + TRIM$(STRING$(X))
+
+			IF Replace > 0 THEN
+				data$ = XstMergeStrings$(data$, Add$, Start, Replace)
+			END IF
+
+		NEXT X
+
+'		PRINT data$
+
+	END IF
+
+'##########################################################
+'space out special characters to make them a separate token
+'##########################################################
+
+	done = $$FALSE
+	Char = 0
+	RepChar$ = ""
+
+	IF data$ THEN
+
+		DO
+
+			SELECT CASE data${Char}
+
+				CASE 60, 62	'<, >
+					RepChar$ = " " + CHR$(data${Char}) + " "
+
+			END SELECT
+
+			IF RepChar$ THEN
+				TrimChar$ = TRIM$(RepChar$)
+
+				replace = SIZE(TrimChar$)
+
+				data$ = XstMergeStrings$ (data$, RepChar$, Char + 1, replace)
+
+				SkipSize  =  replace + 2
+
+				Char = Char + SkipSize
+			ELSE
+				INC Char
+			END IF
+
+			RepChar$ = ""
+
+			IF Char > SIZE(data$)-1 THEN
+				done = $$TRUE
+			END IF
+
+
+		LOOP UNTIL done
+
+	END IF
+
+
+	MyError = RemoveTags(@data$)
+
+	data$ = TRIM$(data$)
+
+'#####################################################################################################
+' In the end after we removed the tags, we will bring back the literals that were not inside the tags.
+' (We do want to have the HTML text contents do we?)
+'#####################################################################################################
+
+	DO
+		IF INSTRI(data$, "^L") THEN
+			EndOfLine = SIZE(data$)-1
+
+			FOR X = INSTRI(data$, "^L") + 1 TO EndOfLine
+
+				IF  data${X} = 32 THEN
+					EXIT FOR
+				END IF
+
+				TempVal$ = TempVal$ + CHR$(data${X})
+			NEXT X
+			Replace = SIZE(TempVal$) + 2
+			Location = INSTRI(data$, "^L")
+			Reset$ = TLiterals$[XLONG(TempVal$)]
+
+			data$ = XstMergeStrings$(data$, Reset$, Location, Replace)
+		ELSE
+			EXIT DO
+		END IF
+
+	LOOP
+
+	PRINT STRING$(HtmlLines+1);" :"; data$
+	HtmlArray$[HtmlLines] = data$
+NEXT HtmlLines
+
+
+XstSaveStringArray(SaveFile$ @HtmlArray$[])
+
+END FUNCTION
+'
+'
+' ###########################
+' #####  RemoveTags ()  #####
+' ###########################
+'
+'
+' To remove all html-<#Tags#> we steal the same code and construction to find the double quotes in the literal scanner.
+' Now we also remove the tags as soon as we found them all.
+'
+'
+FUNCTION  RemoveTags (data$)
+
+
+	REDIM TSlash[-1]
+	REDIM #Literals[-1]
+	#CommentStart = 0
+
+	QuoteStatus = 0
+
+	index = 0
+
+	FOR X = 0 TO SIZE(data$) -1
+
+		SELECT CASE data${X}
+
+			CASE 60	' <
+
+					QuoteLiteral = 0
+
+					REDIM #Literals[UBOUND(#Literals[])+1]
+
+					#Literals[UBOUND(#Literals[])].Start = X + 1
+
+			CASE 62  ' >
+
+					QuoteLiteral = 0
+
+					IF UBOUND(#Literals[]) <> -1 THEN
+						#Literals[UBOUND(#Literals[])].End = X + 1
+					END IF
+
+
+		END SELECT
+
+	NEXT X
+
+	IF UBOUND(#Literals[]) > -1 THEN
+		REDIM TLiterals$[UBOUND(#Literals[])]
+
+		FOR X = 0 TO UBOUND(#Literals[])
+
+			IF (#Literals[X].End-1-#Literals[X].Start) > 0  THEN
+				TLiterals$[X] = MID$(data$, #Literals[X].Start + 1, #Literals[X].End-1-#Literals[X].Start)
+			ELSE
+				TLiterals$[X] = ""
+			END IF
+
+		NEXT X
+
+		FOR X = 0 TO UBOUND(TLiterals$[])
+			LocateLiteral$ = "<" + TLiterals$[X] + ">"
+
+			Start = INSTR(data$, LocateLiteral$) - 1
+
+			Replace = SIZE(LocateLiteral$)+1
+
+			Add$ = ""
+
+			IF Replace > 0 THEN
+				data$ = XstMergeStrings$(data$, Add$, Start, Replace)
+			END IF
+
+		NEXT X
+
+'		PRINT data$
+
+	END IF
+
+'	FOR X = 0 TO UBOUND(#Literals[])
+'		PRINT #Literals[X].Start + 1; " - " ; #Literals[X].End-1-#Literals[X].Start ; " -> " ;
+'		PRINT MID$(data$, #Literals[X].Start + 1, #Literals[X].End-1-#Literals[X].Start)
+'	NEXT X
+
+
+END FUNCTION
+'
+'
+' ############################
+' #####  GetLiterals ()  #####
+' ############################
+'
+'
+' To prevent that we detect a "<" or a ">" in a literal text-line as an openening or closing marker we will first replace
+' all literals for a "^L#"  marker  so "My dog in the window" becomes ^L0 if it is the first literal in the line or ^L1
+' if it is the second and so on.
+'
+'
+FUNCTION  GetLiterals (data$)
+
+
+	REDIM TSlash[-1]
+	REDIM #Literals[-1]
+	#CommentStart = 0
+
+	QuoteStatus = 0
+
+	index = 0
+
+	IF INSTRI(data$, "^") THEN
+		#MCError$ = "Error, \"^\" Invalid sign in variable"
+
+		RETURN -1
+	END IF
+
+	FOR X = 0 TO SIZE(data$) -1
+
+		SELECT CASE data${X}
+
+			CASE 92 ' \
+				REDIM TSlash[UBOUND(TSlash[])+1]
+				TSlash[UBOUND(TSlash[])] = X+1
+
+			CASE 34, 39  ' ", '
+
+				IFZ QuoteStatus THEN
+
+					QuoteLiteral = 0
+
+					FOR Z = 0 TO UBOUND(TSlash[])
+
+						IF TSlash[Z] == X THEN
+							#MCError$ = "No opening quote or illegal character in variable!"
+
+							RETURN -1
+						END IF
+
+					NEXT Z
+
+					REDIM #Literals[UBOUND(#Literals[])+1]
+
+					#Literals[UBOUND(#Literals[])].Start = X + 1
+
+					QuoteStatus = QuoteStatus XOR 1
+				ELSE
+					QuoteLiteral = 0
+
+					FOR Z = 0 TO UBOUND(TSlash[])
+
+						IF TSlash[Z] == X THEN
+							QuoteLiteral = 1
+						END IF
+
+					NEXT Z
+
+					IFZ QuoteLiteral THEN
+						#Literals[UBOUND(#Literals[])].End = X + 1
+
+						QuoteStatus = QuoteStatus XOR 1
+					END IF
+
+				END IF
+
+		END SELECT
+
+	NEXT X
+
+	IF QuoteStatus THEN
+		#MCError$ = "No opening / closing quote or illegal character in variable"
+
+		RETURN -1
+	END IF
+
+' Test procedure
+'	FOR X = 0 TO UBOUND(#Literals[])
+'		PRINT #Literals[X].Start + 1; " - " ; #Literals[X].End-1-#Literals[X].Start; " -> ";
+'		PRINT MID$(data$, #Literals[X].Start + 1, #Literals[X].End-1-#Literals[X].Start)
+'	NEXT X
+
+END FUNCTION
+END PROGRAM
+„Rich Geldreich./Dave Cooper    Shaded 3d Animation            vvacme@worldonline.nl          06-15-01 (19:34)       XBASIC                 1    62354    Shade3d.x   '
+' ####################
+' #####  PROLOG  #####
+' ####################
+'
+PROGRAM	"Shade3D"
+VERSION	"0.3400"
+'Shaded 3-D animation with shadows for XBasic
+'------------------ COMMENTS FROM ORIGINAL PROGRAM ------------------
+'Notes...
+'   This version uses some floating  point math in the initialization
+'code for shading, but after initialization floating point math is not
+'used at all.
+'   The  shading  imploys Lambert's Law to determine the intensity of
+'each visible polygon.  Three simple  lookup tables are calculated at
+'initialization time  which  are  used  to  eliminate  multiples  and
+'divides in the main animation code.
+'   The hidden face  detection  algorithm  was  made  by Dave Cooper.
+'It's fast, and does not require any multiples and divides under most
+'cases.  The "standard" way of detecting hidden faces, by finding the
+'dot product of the normal of each polygon and  the  viewing  vector,
+'was not just good (or fast) enough for me!
+'   The PolyFill routine is the major  bottleneck  of  this  program.
+'QB's  LINE  command isn't as fast as I would like it to be...  On my
+'286-10, the speed isn't that bad (after all, this is all-QB!).  On a
+'386 or 486, this thing should fly...  [hopefully]
+'   The  shadows  are  calculated by projecting a line with the light
+'source's vector through each of the points on the solid.  Where this
+'line hits the ground  plane(which  has  a  constant Y coordinate) is
+'where the new shadow point is plotted.
+'   This program is 100% public domain- but  of  course  please  give
+'some credit if you use anything from this program.  Thanks!
+'--------------- END OF COMMENTS FROM ORIGINAL PROGRAM --------------
+'Converted to XBasic from a program written by Rich Geldreich.
+' ******  Comment libraries in/out as needed  *****
+'
+	IMPORT	"xma"   ' Math library     : SIN/ASIN/SINH/ASINH/LOG/EXP/SQRT...
+'	IMPORT	"xcm"   ' Complex library  : complex number library  (trig, etc)
+	IMPORT	"xst"   ' Standard library : required by most programs
+	IMPORT	"xgr"   ' GraphicsDesigner : required by GuiDesigner programs
+	IMPORT	"xui"   ' GuiDesigner      : required by GuiDesigner programs
+
+' ******  Types  *****
+
+TYPE EdgeType					'For fast polygon rasterization
+	XLONG			.Low
+	XLONG     .High
+END TYPE
+
+TYPE PointType
+	XLONG     .XObject	'original coordinate
+	XLONG			.YObject
+	XLONG			.ZObject
+	XLONG			.XWorld		'rotated coordinate
+	XLONG			.YWorld
+	XLONG			.ZWorld
+	XLONG			.XView		'rotated & translated coordinate
+	XLONG			.YView
+	XLONG			.XShadow	'coordinates projected onto the ground plane
+	XLONG			.YShadow
+END TYPE
+
+TYPE PolyType
+	XLONG			.P1				'3 points that make up the polygon (they point
+	XLONG			.P2				' to the point list array)
+	XLONG			.P3
+	XLONG			.Culled		'True if plane not visible
+	XLONG			.ZCenter	'Z center of polygon
+	XLONG			.ZOrder		'Used in the shell sort of the ZCenters
+	XLONG			.Intensity'Intensity of the polygon
+	XLONG			.WorldXN	'Contains the coordinates of the point
+	XLONG			.WorldYN	' which is both perpendicular and a constant
+	XLONG			.WorldZN	' distance from th polygon
+	XLONG			.NormalX	'Normal of polygon -128 to 128
+	XLONG			.NormalY	' (used for Lambert shading)
+	XLONG			.NormalZ
+END TYPE
+
+TYPE LineType
+	XLONG			.P1				'Used for shadow projection
+	XLONG			.P2
+END TYPE
+'
+DECLARE FUNCTION  Entry         ()
+DECLARE FUNCTION  InitGui       ()
+DECLARE FUNCTION  InitProgram   ()
+DECLARE FUNCTION  CreateWindows ()
+DECLARE FUNCTION  InitWindows   ()
+DECLARE FUNCTION  Shade3D       (grid, message, v0, v1, v2, v3, r0, ANY)
+DECLARE FUNCTION  Shade3DCode   (grid, message, v0, v1, v2, v3, kid, ANY)
+DECLARE FUNCTION  FindNormals ()
+DECLARE FUNCTION  CullPolygons ()
+DECLARE FUNCTION  DrawLine (xs, ys, xe, ye)
+DECLARE FUNCTION  DrawObject ()
+DECLARE FUNCTION  DrawShadows ()
+DECLARE FUNCTION  EdgeFill (YLow, YHigh, C)
+DECLARE FUNCTION  PolyFill (x1, y1, x2, y2, x3, y3, C)
+DECLARE FUNCTION  RotatePoints ()
+DECLARE FUNCTION  ShadePolygons ()
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeType EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED LineType lines[]
+SHARED PolyType Polys[]
+SHARED PointType Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+'
+'
+' ######################
+' #####  Entry ()  #####
+' ######################
+'
+FUNCTION  Entry ()
+	SHARED  terminateProgram
+	STATIC	entry
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+SHARED D1, D2, D3, DZ
+
+
+'
+	IF entry THEN RETURN					' enter once
+	entry =  $$TRUE								' enter occured
+'
+
+	InitGui ()										' initialize messages
+	InitProgram ()								' initialize this program
+	CreateWindows ()							' create main window and others
+	InitWindows ()								' initialize windows and grids
+'
+	IF LIBRARY(0) THEN RETURN			' main program executes message loop
+
+
+R1 = 0: R2 = 0: R3 = 0      'three angles of rotation
+ox = 0: oy = -50: oz = 1100 'object's origin (this program cannot currently
+                            'handle the object when it goes behind theviewer!)
+s = 1: t = 0
+
+YHigh[0] = -32768: ShadowYHigh[0] = -32768
+YHigh[1] = -32768: ShadowYHigh[1] = -32768
+
+D1 = 0 : D2 = 0 : D3 = 0
+
+	DO
+
+		XstGetSystemTime (@tx)
+		DO UNTIL t > tx + 0
+			XstGetSystemTime (@t)
+			XgrMessagesPending (@count)
+			IF count > 0 THEN XgrProcessMessages (1)
+		LOOP
+		IF YHigh[s] <> -32768 THEN
+			IF YHigh[s] < 100 THEN
+				XgrFillBox (##bufferGrid, 0, XLow[s], YLow[s], XHigh[s], YHigh[s])
+			ELSE
+				IF YLow[s] < 100 THEN
+					XgrFillBox (##bufferGrid, 0, XLow[s], YLow[s], XHigh[s], 99)
+					XgrFillBox (##bufferGrid, $$Grey, XLow[s], 100, XHigh[s], YHigh[s])
+				ELSE
+					XgrFillBox (##bufferGrid, $$Grey, XLow[s], YLow[s], XHigh[s], YHigh[s])
+				END IF
+			END IF
+		END IF
+
+		IF ShadowYHigh[s] <> -32768 THEN
+			XgrFillBox (##bufferGrid, $$Grey, ShadowXLow[s], ShadowYLow[s], ShadowXHigh[s], ShadowYHigh[s])
+		END IF
+
+		RotatePoints ()
+		CullPolygons ()
+		ShadePolygons ()
+
+		XLow[s] = 32767: XHigh[s] = -32768
+		YLow[s] = 32767: YHigh[s] = -32768
+
+		'XgrClearGrid (##bufferGrid, 0)
+
+		DrawShadows ()
+		DrawObject ()
+
+		R1 = (R1 + D1) MOD 360 : IF R1 < 0 THEN R1 = R1 + 360
+		R2 = (R2 + D2) MOD 360 : IF R2 < 0 THEN R2 = R2 + 360
+		R3 = (R3 + D3) MOD 360 : IF R3 < 0 THEN R3 = R3 + 360
+		oz = oz + DZ : ox = ox + dx
+		IF oz < 600 THEN
+			oz = 600: DZ = 0
+		ELSE
+			IF oz > 8000 THEN
+				oz = 8000: DZ = 0
+			END IF
+		END IF
+		IF ox < -4000 THEN
+			ox = -4000: dx = 0
+		ELSE
+			IF ox > 4000 THEN
+				ox = 400: dx = 0
+			END IF
+		END IF
+
+		XgrCopyImage (##DisplayGrid, ##bufferGrid)
+
+	LOOP UNTIL terminateProgram		' and repeat until program is terminated
+END FUNCTION
+'
+'
+' ########################
+' #####  InitGui ()  #####
+' ########################
+'
+' InitGui() initializes cursor, icon, message, and display variables.
+' Programs can reference these variables, but must never change them.
+'
+FUNCTION  InitGui ()
+'
+' need to set program name so grid properties
+' can be set from the grid property database.
+'
+	program$ = PROGRAM$(0)
+	XstSetProgramName (@program$)
+'
+' ***************************************
+' *****  Register Standard Cursors  *****
+' ***************************************
+'
+	XgrRegisterCursor (@"default",      @#cursorDefault)
+	XgrRegisterCursor (@"arrow",        @#cursorArrow)
+	XgrRegisterCursor (@"n",            @#cursorN)
+	XgrRegisterCursor (@"s",            @#cursorS)
+	XgrRegisterCursor (@"e",            @#cursorE)
+	XgrRegisterCursor (@"w",            @#cursorW)
+	XgrRegisterCursor (@"ns",           @#cursorArrowsNS)
+	XgrRegisterCursor (@"ns",           @#cursorArrowsSN)
+	XgrRegisterCursor (@"ew",           @#cursorArrowsEW)
+	XgrRegisterCursor (@"ew",           @#cursorArrowsWE)
+	XgrRegisterCursor (@"nwse",         @#cursorArrowsNWSE)
+	XgrRegisterCursor (@"nesw",         @#cursorArrowsNESW)
+	XgrRegisterCursor (@"all",          @#cursorArrowsAll)
+	XgrRegisterCursor (@"plus",         @#cursorPlus)
+	XgrRegisterCursor (@"wait",         @#cursorWait)
+	XgrRegisterCursor (@"insert",       @#cursorInsert)
+	XgrRegisterCursor (@"crosshair",    @#cursorCrosshair)
+	XgrRegisterCursor (@"hourglass",    @#cursorHourglass)
+	XgrRegisterCursor (@"hand",         @#cursorHand)
+	XgrRegisterCursor (@"help",         @#cursorHelp)
+'
+	#defaultCursor = #cursorDefault
+'
+'
+' ********************************************
+' *****  Register Standard Window Icons  *****
+' ********************************************
+'
+	XgrRegisterIcon (@"hand",					@#iconHand)
+	XgrRegisterIcon (@"asterisk",			@#iconAsterisk)
+	XgrRegisterIcon (@"question",			@#iconQuestion)
+	XgrRegisterIcon (@"exclamation",	@#iconExclamation)
+	XgrRegisterIcon (@"application",	@#iconApplication)
+'
+	XgrRegisterIcon (@"hand",					@#iconStop)						' alias
+	XgrRegisterIcon (@"asterisk",			@#iconInformation)		' alias
+	XgrRegisterIcon (@"application",  @#iconBlank)					' alias
+'
+	XgrRegisterIcon (@"window",				@#iconWindow)					' custom
+'
+'
+' ******************************
+' *****  Register Messages *****  Create message numbers for message names
+' ******************************
+'
+	XgrRegisterMessage (@"Blowback",										@#Blowback)
+	XgrRegisterMessage (@"Callback",										@#Callback)
+	XgrRegisterMessage (@"Cancel",											@#Cancel)
+	XgrRegisterMessage (@"Change",											@#Change)
+	XgrRegisterMessage (@"CloseWindow",									@#CloseWindow)
+	XgrRegisterMessage (@"ContextChange",								@#ContextChange)
+	XgrRegisterMessage (@"Create",											@#Create)
+	XgrRegisterMessage (@"CreateValueArray",						@#CreateValueArray)
+	XgrRegisterMessage (@"CreateWindow",								@#CreateWindow)
+	XgrRegisterMessage (@"CursorH",											@#CursorH)
+	XgrRegisterMessage (@"CursorV",											@#CursorV)
+	XgrRegisterMessage (@"Deselected",									@#Deselected)
+	XgrRegisterMessage (@"Destroy",											@#Destroy)
+	XgrRegisterMessage (@"Destroyed",										@#Destroyed)
+	XgrRegisterMessage (@"DestroyWindow",								@#DestroyWindow)
+	XgrRegisterMessage (@"Disable",											@#Disable)
+	XgrRegisterMessage (@"Disabled",										@#Disabled)
+	XgrRegisterMessage (@"Displayed",										@#Displayed)
+	XgrRegisterMessage (@"DisplayWindow",								@#DisplayWindow)
+	XgrRegisterMessage (@"Enable",											@#Enable)
+	XgrRegisterMessage (@"Enabled",											@#Enabled)
+	XgrRegisterMessage (@"Enter",												@#Enter)
+	XgrRegisterMessage (@"ExitMessageLoop",							@#ExitMessageLoop)
+	XgrRegisterMessage (@"Find",												@#Find)
+	XgrRegisterMessage (@"FindForward",									@#FindForward)
+	XgrRegisterMessage (@"FindReverse",									@#FindReverse)
+	XgrRegisterMessage (@"Forward",											@#Forward)
+	XgrRegisterMessage (@"GetAlign",										@#GetAlign)
+	XgrRegisterMessage (@"GetBorder",										@#GetBorder)
+	XgrRegisterMessage (@"GetBorderOffset",							@#GetBorderOffset)
+	XgrRegisterMessage (@"GetCallback",									@#GetCallback)
+	XgrRegisterMessage (@"GetCallbackArgs",							@#GetCallbackArgs)
+	XgrRegisterMessage (@"GetCan",											@#GetCan)
+	XgrRegisterMessage (@"GetCharacterMapArray",				@#GetCharacterMapArray)
+	XgrRegisterMessage (@"GetCharacterMapEntry",				@#GetCharacterMapEntry)
+	XgrRegisterMessage (@"GetClipGrid",									@#GetClipGrid)
+	XgrRegisterMessage (@"GetColor",										@#GetColor)
+	XgrRegisterMessage (@"GetColorExtra",								@#GetColorExtra)
+	XgrRegisterMessage (@"GetCursor",										@#GetCursor)
+	XgrRegisterMessage (@"GetCursorXY",									@#GetCursorXY)
+	XgrRegisterMessage (@"GetDisplay",									@#GetDisplay)
+	XgrRegisterMessage (@"GetEnclosedGrids",						@#GetEnclosedGrids)
+	XgrRegisterMessage (@"GetEnclosingGrid",						@#GetEnclosingGrid)
+	XgrRegisterMessage (@"GetFocusColor",								@#GetFocusColor)
+	XgrRegisterMessage (@"GetFocusColorExtra",					@#GetFocusColorExtra)
+	XgrRegisterMessage (@"GetFont",											@#GetFont)
+	XgrRegisterMessage (@"GetFontMetrics",							@#GetFontMetrics)
+	XgrRegisterMessage (@"GetFontNumber",								@#GetFontNumber)
+	XgrRegisterMessage (@"GetGridFunction",							@#GetGridFunction)
+	XgrRegisterMessage (@"GetGridFunctionName",					@#GetGridFunctionName)
+	XgrRegisterMessage (@"GetGridName",									@#GetGridName)
+	XgrRegisterMessage (@"GetGridNumber",								@#GetGridNumber)
+	XgrRegisterMessage (@"GetGridProperties",						@#GetGridProperties)
+	XgrRegisterMessage (@"GetGridType",									@#GetGridType)
+	XgrRegisterMessage (@"GetGridTypeName",							@#GetGridTypeName)
+	XgrRegisterMessage (@"GetGroup",										@#GetGroup)
+	XgrRegisterMessage (@"GetHelp",											@#GetHelp)
+	XgrRegisterMessage (@"GetHelpFile",									@#GetHelpFile)
+	XgrRegisterMessage (@"GetHelpString",								@#GetHelpString)
+	XgrRegisterMessage (@"GetHelpStrings",							@#GetHelpStrings)
+	XgrRegisterMessage (@"GetHintString",								@#GetHintString)
+	XgrRegisterMessage (@"GetImage",										@#GetImage)
+	XgrRegisterMessage (@"GetImageCoords",							@#GetImageCoords)
+	XgrRegisterMessage (@"GetIndent",										@#GetIndent)
+	XgrRegisterMessage (@"GetInfo",											@#GetInfo)
+	XgrRegisterMessage (@"GetJustify",									@#GetJustify)
+	XgrRegisterMessage (@"GetKeyboardFocus",						@#GetKeyboardFocus)
+	XgrRegisterMessage (@"GetKeyboardFocusGrid",				@#GetKeyboardFocusGrid)
+	XgrRegisterMessage (@"GetKidArray",									@#GetKidArray)
+	XgrRegisterMessage (@"GetKidNumber",								@#GetKidNumber)
+	XgrRegisterMessage (@"GetKids",											@#GetKids)
+	XgrRegisterMessage (@"GetKind",											@#GetKind)
+	XgrRegisterMessage (@"GetMaxMinSize",								@#GetMaxMinSize)
+	XgrRegisterMessage (@"GetMessageFunc",							@#GetMessageFunc)
+	XgrRegisterMessage (@"GetMessageFuncArray",					@#GetMessageFuncArray)
+	XgrRegisterMessage (@"GetMessageSub",								@#GetMessageSub)
+	XgrRegisterMessage (@"GetMessageSubArray",					@#GetMessageSubArray)
+	XgrRegisterMessage (@"GetModalInfo",								@#GetModalInfo)
+	XgrRegisterMessage (@"GetModalWindow",							@#GetModalWindow)
+	XgrRegisterMessage (@"GetParent",										@#GetParent)
+	XgrRegisterMessage (@"GetPosition",									@#GetPosition)
+	XgrRegisterMessage (@"GetProtoInfo",								@#GetProtoInfo)
+	XgrRegisterMessage (@"GetRedrawFlags",							@#GetRedrawFlags)
+	XgrRegisterMessage (@"GetSize",											@#GetSize)
+	XgrRegisterMessage (@"GetSmallestSize",							@#GetSmallestSize)
+	XgrRegisterMessage (@"GetState",										@#GetState)
+	XgrRegisterMessage (@"GetStyle",										@#GetStyle)
+	XgrRegisterMessage (@"GetTabArray",									@#GetTabArray)
+	XgrRegisterMessage (@"GetTabWidth",									@#GetTabWidth)
+	XgrRegisterMessage (@"GetTextArray",								@#GetTextArray)
+	XgrRegisterMessage (@"GetTextArrayBounds",					@#GetTextArrayBounds)
+	XgrRegisterMessage (@"GetTextArrayLine",						@#GetTextArrayLine)
+	XgrRegisterMessage (@"GetTextArrayLines",						@#GetTextArrayLines)
+	XgrRegisterMessage (@"GetTextCursor",								@#GetTextCursor)
+	XgrRegisterMessage (@"GetTextFilename",							@#GetTextFilename)
+	XgrRegisterMessage (@"GetTextPosition",							@#GetTextPosition)
+	XgrRegisterMessage (@"GetTextSelection",						@#GetTextSelection)
+	XgrRegisterMessage (@"GetTextSpacing",							@#GetTextSpacing)
+	XgrRegisterMessage (@"GetTextString",								@#GetTextString)
+	XgrRegisterMessage (@"GetTextStrings",							@#GetTextStrings)
+	XgrRegisterMessage (@"GetTexture",									@#GetTexture)
+	XgrRegisterMessage (@"GetTimer",										@#GetTimer)
+	XgrRegisterMessage (@"GetValue",										@#GetValue)
+	XgrRegisterMessage (@"GetValueArray",								@#GetValueArray)
+	XgrRegisterMessage (@"GetValues",										@#GetValues)
+	XgrRegisterMessage (@"GetWindow",										@#GetWindow)
+	XgrRegisterMessage (@"GetWindowFunction",						@#GetWindowFunction)
+	XgrRegisterMessage (@"GetWindowGrid",								@#GetWindowGrid)
+	XgrRegisterMessage (@"GetWindowIcon",								@#GetWindowIcon)
+	XgrRegisterMessage (@"GetWindowSize",								@#GetWindowSize)
+	XgrRegisterMessage (@"GetWindowTitle",							@#GetWindowTitle)
+	XgrRegisterMessage (@"GotKeyboardFocus",						@#GotKeyboardFocus)
+	XgrRegisterMessage (@"GrabArray",										@#GrabArray)
+	XgrRegisterMessage (@"GrabTextArray",								@#GrabTextArray)
+	XgrRegisterMessage (@"GrabTextString",							@#GrabTextString)
+	XgrRegisterMessage (@"GrabValueArray",							@#GrabValueArray)
+	XgrRegisterMessage (@"Help",												@#Help)
+	XgrRegisterMessage (@"Hidden",											@#Hidden)
+	XgrRegisterMessage (@"HideTextCursor",							@#HideTextCursor)
+	XgrRegisterMessage (@"HideWindow",									@#HideWindow)
+	XgrRegisterMessage (@"Initialize",									@#Initialize)
+	XgrRegisterMessage (@"Initialized",									@#Initialized)
+	XgrRegisterMessage (@"Inline",											@#Inline)
+	XgrRegisterMessage (@"InquireText",									@#InquireText)
+	XgrRegisterMessage (@"KeyboardFocusBackward",				@#KeyboardFocusBackward)
+	XgrRegisterMessage (@"KeyboardFocusForward",				@#KeyboardFocusForward)
+	XgrRegisterMessage (@"KeyDown",											@#KeyDown)
+	XgrRegisterMessage (@"KeyUp",												@#KeyUp)
+	XgrRegisterMessage (@"LostKeyboardFocus",						@#LostKeyboardFocus)
+	XgrRegisterMessage (@"LostTextSelection",						@#LostTextSelection)
+	XgrRegisterMessage (@"Maximized",										@#Maximized)
+	XgrRegisterMessage (@"MaximizeWindow",							@#MaximizeWindow)
+	XgrRegisterMessage (@"Maximum",											@#Maximum)
+	XgrRegisterMessage (@"Minimized",										@#Minimized)
+	XgrRegisterMessage (@"MinimizeWindow",							@#MinimizeWindow)
+	XgrRegisterMessage (@"Minimum",											@#Minimum)
+	XgrRegisterMessage (@"MonitorContext",							@#MonitorContext)
+	XgrRegisterMessage (@"MonitorHelp",									@#MonitorHelp)
+	XgrRegisterMessage (@"MonitorKeyboard",							@#MonitorKeyboard)
+	XgrRegisterMessage (@"MonitorMouse",								@#MonitorMouse)
+	XgrRegisterMessage (@"MouseDown",										@#MouseDown)
+	XgrRegisterMessage (@"MouseDrag",										@#MouseDrag)
+	XgrRegisterMessage (@"MouseEnter",									@#MouseEnter)
+	XgrRegisterMessage (@"MouseExit",										@#MouseExit)
+	XgrRegisterMessage (@"MouseMove",										@#MouseMove)
+	XgrRegisterMessage (@"MouseUp",											@#MouseUp)
+	XgrRegisterMessage (@"MuchLess",										@#MuchLess)
+	XgrRegisterMessage (@"MuchMore",										@#MuchMore)
+	XgrRegisterMessage (@"Notify",											@#Notify)
+	XgrRegisterMessage (@"OneLess",											@#OneLess)
+	XgrRegisterMessage (@"OneMore",											@#OneMore)
+	XgrRegisterMessage (@"PokeArray",										@#PokeArray)
+	XgrRegisterMessage (@"PokeTextArray",								@#PokeTextArray)
+	XgrRegisterMessage (@"PokeTextString",							@#PokeTextString)
+	XgrRegisterMessage (@"PokeValueArray",							@#PokeValueArray)
+	XgrRegisterMessage (@"Print",												@#Print)
+	XgrRegisterMessage (@"Redraw",											@#Redraw)
+	XgrRegisterMessage (@"RedrawGrid",									@#RedrawGrid)
+	XgrRegisterMessage (@"RedrawLines",									@#RedrawLines)
+	XgrRegisterMessage (@"RedrawText",									@#RedrawText)
+	XgrRegisterMessage (@"RedrawWindow",								@#RedrawWindow)
+	XgrRegisterMessage (@"Replace",											@#Replace)
+	XgrRegisterMessage (@"ReplaceForward",							@#ReplaceForward)
+	XgrRegisterMessage (@"ReplaceReverse",							@#ReplaceReverse)
+	XgrRegisterMessage (@"Reset",												@#Reset)
+	XgrRegisterMessage (@"Resize",											@#Resize)
+	XgrRegisterMessage (@"Resized",											@#Resized)
+	XgrRegisterMessage (@"ResizeNot",										@#ResizeNot)
+	XgrRegisterMessage (@"ResizeWindow",								@#ResizeWindow)
+	XgrRegisterMessage (@"ResizeWindowToGrid",					@#ResizeWindowToGrid)
+	XgrRegisterMessage (@"Resized",											@#Resized)
+	XgrRegisterMessage (@"Reverse",											@#Reverse)
+	XgrRegisterMessage (@"ScrollH",											@#ScrollH)
+	XgrRegisterMessage (@"ScrollV",											@#ScrollV)
+	XgrRegisterMessage (@"Select",											@#Select)
+	XgrRegisterMessage (@"Selected",										@#Selected)
+	XgrRegisterMessage (@"Selection",										@#Selection)
+	XgrRegisterMessage (@"SelectWindow",								@#SelectWindow)
+	XgrRegisterMessage (@"SetAlign",										@#SetAlign)
+	XgrRegisterMessage (@"SetBorder",										@#SetBorder)
+	XgrRegisterMessage (@"SetBorderOffset",							@#SetBorderOffset)
+	XgrRegisterMessage (@"SetCallback",									@#SetCallback)
+	XgrRegisterMessage (@"SetCan",											@#SetCan)
+	XgrRegisterMessage (@"SetCharacterMapArray",				@#SetCharacterMapArray)
+	XgrRegisterMessage (@"SetCharacterMapEntry",				@#SetCharacterMapEntry)
+	XgrRegisterMessage (@"SetClipGrid",									@#SetClipGrid)
+	XgrRegisterMessage (@"SetColor",										@#SetColor)
+	XgrRegisterMessage (@"SetColorAll",									@#SetColorAll)
+	XgrRegisterMessage (@"SetColorExtra",								@#SetColorExtra)
+	XgrRegisterMessage (@"SetColorExtraAll",						@#SetColorExtraAll)
+	XgrRegisterMessage (@"SetCursor",										@#SetCursor)
+	XgrRegisterMessage (@"SetCursorXY",									@#SetCursorXY)
+	XgrRegisterMessage (@"SetDisplay",									@#SetDisplay)
+	XgrRegisterMessage (@"SetFocusColor",								@#SetFocusColor)
+	XgrRegisterMessage (@"SetFocusColorExtra",					@#SetFocusColorExtra)
+	XgrRegisterMessage (@"SetFont",											@#SetFont)
+	XgrRegisterMessage (@"SetFontNumber",								@#SetFontNumber)
+	XgrRegisterMessage (@"SetGridFunction",							@#SetGridFunction)
+	XgrRegisterMessage (@"SetGridFunctionName",					@#SetGridFunctionName)
+	XgrRegisterMessage (@"SetGridName",									@#SetGridName)
+	XgrRegisterMessage (@"SetGridProperties",						@#SetGridProperties)
+	XgrRegisterMessage (@"SetGridType",									@#SetGridType)
+	XgrRegisterMessage (@"SetGridTypeName",							@#SetGridTypeName)
+	XgrRegisterMessage (@"SetGroup",										@#SetGroup)
+	XgrRegisterMessage (@"SetHelp",											@#SetHelp)
+	XgrRegisterMessage (@"SetHelpFile",									@#SetHelpFile)
+	XgrRegisterMessage (@"SetHelpString",								@#SetHelpString)
+	XgrRegisterMessage (@"SetHelpStrings",							@#SetHelpStrings)
+	XgrRegisterMessage (@"SetHintString",								@#SetHintString)
+	XgrRegisterMessage (@"SetImage",										@#SetImage)
+	XgrRegisterMessage (@"SetImageCoords",							@#SetImageCoords)
+	XgrRegisterMessage (@"SetIndent",										@#SetIndent)
+	XgrRegisterMessage (@"SetInfo",											@#SetInfo)
+	XgrRegisterMessage (@"SetJustify",									@#SetJustify)
+	XgrRegisterMessage (@"SetKeyboardFocus",						@#SetKeyboardFocus)
+	XgrRegisterMessage (@"SetKeyboardFocusGrid",				@#SetKeyboardFocusGrid)
+	XgrRegisterMessage (@"SetMaxMinSize",								@#SetMaxMinSize)
+	XgrRegisterMessage (@"SetMessageFunc",							@#SetMessageFunc)
+	XgrRegisterMessage (@"SetMessageFuncArray",					@#SetMessageFuncArray)
+	XgrRegisterMessage (@"SetMessageSub",								@#SetMessageSub)
+	XgrRegisterMessage (@"SetMessageSubArray",					@#SetMessageSubArray)
+	XgrRegisterMessage (@"SetModalWindow",							@#SetModalWindow)
+	XgrRegisterMessage (@"SetParent",										@#SetParent)
+	XgrRegisterMessage (@"SetPosition",									@#SetPosition)
+	XgrRegisterMessage (@"SetRedrawFlags",							@#SetRedrawFlags)
+	XgrRegisterMessage (@"SetSize",											@#SetSize)
+	XgrRegisterMessage (@"SetState",										@#SetState)
+	XgrRegisterMessage (@"SetStyle",										@#SetStyle)
+	XgrRegisterMessage (@"SetTabArray",									@#SetTabArray)
+	XgrRegisterMessage (@"SetTabWidth",									@#SetTabWidth)
+	XgrRegisterMessage (@"SetTextArray",								@#SetTextArray)
+	XgrRegisterMessage (@"SetTextArrayLine",						@#SetTextArrayLine)
+	XgrRegisterMessage (@"SetTextArrayLines",						@#SetTextArrayLines)
+	XgrRegisterMessage (@"SetTextCursor",								@#SetTextCursor)
+	XgrRegisterMessage (@"SetTextFilename",							@#SetTextFilename)
+	XgrRegisterMessage (@"SetTextSelection",						@#SetTextSelection)
+	XgrRegisterMessage (@"SetTextSpacing",							@#SetTextSpacing)
+	XgrRegisterMessage (@"SetTextString",								@#SetTextString)
+	XgrRegisterMessage (@"SetTextStrings",							@#SetTextStrings)
+	XgrRegisterMessage (@"SetTexture",									@#SetTexture)
+	XgrRegisterMessage (@"SetTimer",										@#SetTimer)
+	XgrRegisterMessage (@"SetValue",										@#SetValue)
+	XgrRegisterMessage (@"SetValues",										@#SetValues)
+	XgrRegisterMessage (@"SetValueArray",								@#SetValueArray)
+	XgrRegisterMessage (@"SetWindowFunction",						@#SetWindowFunction)
+	XgrRegisterMessage (@"SetWindowIcon",								@#SetWindowIcon)
+	XgrRegisterMessage (@"SetWindowTitle",							@#SetWindowTitle)
+	XgrRegisterMessage (@"ShowTextCursor",							@#ShowTextCursor)
+	XgrRegisterMessage (@"ShowWindow",									@#ShowWindow)
+	XgrRegisterMessage (@"SomeLess",										@#SomeLess)
+	XgrRegisterMessage (@"SomeMore",										@#SomeMore)
+	XgrRegisterMessage (@"StartTimer",									@#StartTimer)
+	XgrRegisterMessage (@"SystemMessage",								@#SystemMessage)
+	XgrRegisterMessage (@"TextDelete",									@#TextDelete)
+	XgrRegisterMessage (@"TextEvent",										@#TextEvent)
+	XgrRegisterMessage (@"TextInsert",									@#TextInsert)
+	XgrRegisterMessage (@"TextModified",								@#TextModified)
+	XgrRegisterMessage (@"TextReplace",									@#TextReplace)
+	XgrRegisterMessage (@"TimeOut",											@#TimeOut)
+	XgrRegisterMessage (@"Update",											@#Update)
+	XgrRegisterMessage (@"WindowClose",									@#WindowClose)
+	XgrRegisterMessage (@"WindowCreate",								@#WindowCreate)
+	XgrRegisterMessage (@"WindowDeselected",						@#WindowDeselected)
+	XgrRegisterMessage (@"WindowDestroy",								@#WindowDestroy)
+	XgrRegisterMessage (@"WindowDestroyed",							@#WindowDestroyed)
+	XgrRegisterMessage (@"WindowDisplay",								@#WindowDisplay)
+	XgrRegisterMessage (@"WindowDisplayed",							@#WindowDisplayed)
+	XgrRegisterMessage (@"WindowGetDisplay",						@#WindowGetDisplay)
+	XgrRegisterMessage (@"WindowGetFunction",						@#WindowGetFunction)
+	XgrRegisterMessage (@"WindowGetIcon",								@#WindowGetIcon)
+	XgrRegisterMessage (@"WindowGetKeyboardFocusGrid",	@#WindowGetKeyboardFocusGrid)
+	XgrRegisterMessage (@"WindowGetSelectedWindow",			@#WindowGetSelectedWindow)
+	XgrRegisterMessage (@"WindowGetSize",								@#WindowGetSize)
+	XgrRegisterMessage (@"WindowGetTitle",							@#WindowGetTitle)
+	XgrRegisterMessage (@"WindowHelp",									@#WindowHelp)
+	XgrRegisterMessage (@"WindowHide",									@#WindowHide)
+	XgrRegisterMessage (@"WindowHidden",								@#WindowHidden)
+	XgrRegisterMessage (@"WindowKeyDown",								@#WindowKeyDown)
+	XgrRegisterMessage (@"WindowKeyUp",									@#WindowKeyUp)
+	XgrRegisterMessage (@"WindowMaximize",							@#WindowMaximize)
+	XgrRegisterMessage (@"WindowMaximized",							@#WindowMaximized)
+	XgrRegisterMessage (@"WindowMinimize",							@#WindowMinimize)
+	XgrRegisterMessage (@"WindowMinimized",							@#WindowMinimized)
+	XgrRegisterMessage (@"WindowMonitorContext",				@#WindowMonitorContext)
+	XgrRegisterMessage (@"WindowMonitorHelp",						@#WindowMonitorHelp)
+	XgrRegisterMessage (@"WindowMonitorKeyboard",				@#WindowMonitorKeyboard)
+	XgrRegisterMessage (@"WindowMonitorMouse",					@#WindowMonitorMouse)
+	XgrRegisterMessage (@"WindowMouseDown",							@#WindowMouseDown)
+	XgrRegisterMessage (@"WindowMouseDrag",							@#WindowMouseDrag)
+	XgrRegisterMessage (@"WindowMouseEnter",						@#WindowMouseEnter)
+	XgrRegisterMessage (@"WindowMouseExit",							@#WindowMouseExit)
+	XgrRegisterMessage (@"WindowMouseMove",							@#WindowMouseMove)
+	XgrRegisterMessage (@"WindowMouseUp",								@#WindowMouseUp)
+	XgrRegisterMessage (@"WindowRedraw",								@#WindowRedraw)
+	XgrRegisterMessage (@"WindowRegister",							@#WindowRegister)
+	XgrRegisterMessage (@"WindowResize",								@#WindowResize)
+	XgrRegisterMessage (@"WindowResized",								@#WindowResized)
+	XgrRegisterMessage (@"WindowResizeToGrid",					@#WindowResizeToGrid)
+	XgrRegisterMessage (@"WindowSelect",								@#WindowSelect)
+	XgrRegisterMessage (@"WindowSelected",							@#WindowSelected)
+	XgrRegisterMessage (@"WindowSetFunction",						@#WindowSetFunction)
+	XgrRegisterMessage (@"WindowSetIcon",								@#WindowSetIcon)
+	XgrRegisterMessage (@"WindowSetKeyboardFocusGrid",	@#WindowSetKeyboardFocusGrid)
+	XgrRegisterMessage (@"WindowSetTitle",							@#WindowSetTitle)
+	XgrRegisterMessage (@"WindowShow",									@#WindowShow)
+	XgrRegisterMessage (@"WindowSystemMessage",					@#WindowSystemMessage)
+	XgrRegisterMessage (@"LastMessage",									@#LastMessage)
+'
+	XgrGetDisplaySize ("", @#displayWidth, @#displayHeight, @#windowBorderWidth, @#windowTitleHeight)
+END FUNCTION
+'
+'
+' ############################
+' #####  InitProgram ()  #####
+' ############################
+
+FUNCTION  InitProgram ()
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+' ***** DIM Arrays *****
+	DIM EdgeList[199]
+	DIM SineTable[359 + 90]
+
+	DIM lines[100]
+	DIM Polys[100]
+	DIM Points[100]
+	DIM lx[256], ly[256], lz[256]
+
+	DIM XLow[1], XHigh[1], YLow[1], YHigh[1]
+	DIM ShadowXLow[1], ShadowXHigh[1], ShadowYLow[1], ShadowYHigh[1]
+
+
+
+'========= Pyramid =========
+'Points to follow...
+MaxPoints = 4
+
+Points[0].XObject = -100
+Points[0].YObject = 0
+Points[0].ZObject = 100
+
+Points[1].XObject = -100
+Points[1].YObject = 0
+Points[1].ZObject = -100
+
+Points[2].XObject = 100
+Points[2].YObject = 0
+Points[2].ZObject = -100
+
+Points[3].XObject = 100
+Points[3].YObject = 0
+Points[3].ZObject = 100
+
+Points[4].XObject = 0
+Points[4].YObject = -290
+Points[4].ZObject = 0
+
+'Center the object
+X = X \ (MaxPoints + 1): Y = Y \ (MaxPoints + 1): Z = Z \ (MaxPoints + 1)
+FOR a = 0 TO MaxPoints
+    Points[a].XObject = Points[a].XObject - X
+    Points[a].YObject = Points[a].YObject - Y
+    Points[a].ZObject = Points[a].ZObject - Z
+NEXT
+
+'Polygons follow (must be specified in a counterclockwise order)
+MaxPolys = 5
+
+Polys[0].P1 = 4
+Polys[0].P2 = 0
+Polys[0].P3 = 3
+
+Polys[1].P1 = 4
+Polys[1].P2 = 3
+Polys[1].P3 = 2
+
+Polys[2].P1 = 4
+Polys[2].P2 = 1
+Polys[2].P3 = 0
+
+Polys[3].P1 = 4
+Polys[3].P2 = 2
+Polys[3].P3 = 1
+
+Polys[4].P1 = 3
+Polys[4].P2 = 0
+Polys[4].P3 = 1
+
+Polys[5].P1 = 3
+Polys[5].P2 = 1
+Polys[5].P3 = 2
+
+'Lines to follow...
+MaxLines = 7
+
+lines[0].P1 = 4
+lines[0].P2 = 0
+
+lines[1].P1 = 4
+lines[1].P2 = 1
+
+lines[2].P1 = 4
+lines[2].P2 = 2
+
+lines[3].P1 = 4
+lines[3].P2 = 3
+
+lines[4].P1 = 0
+lines[4].P2 = 1
+
+lines[5].P1 = 1
+lines[5].P2 = 2
+
+lines[6].P1 = 2
+lines[6].P2 = 3
+
+lines[7].P1 = 3
+lines[7].P2 = 0
+
+
+'Precalculate the normal point of each polygon for fast Lambert shading
+
+FindNormals ()
+
+'Precalculate the sine table
+a = 0
+
+FOR a! = 0 TO (359 + 90) / 57.29 STEP 1 / 57.29
+    SineTable[a] = SIN(a!) * 1024: a = a + 1
+NEXT
+
+'Some light source configurations won't work that great!
+l1 = 70: l2 = 40           'light source's spherical coordinates
+a1! = l1 / 57.29: a2! = l2 / 57.29
+
+s1! = SIN(a1!): c1! = COS(a1!)
+s2! = SIN(a2!): c2! = COS(a2!)
+lx = 128 * s1! * c2!        'convert spherical coordinates to a vector
+ly = 128 * s1! * s2!        'scale up by 128 for integer math
+lz = 128 * c1!
+
+FOR a = -128 TO 128         'precalculate the three light source tables
+		lx[a + 128] = lx * a    'for fast Lambert shading
+    ly[a + 128] = ly * a
+    lz[a + 128] = lz * a
+NEXT
+
+END FUNCTION
+'
+'
+' ##############################
+' #####  CreateWindows ()  #####
+' ##############################
+
+FUNCTION  CreateWindows ()
+	IF LIBRARY(0) THEN RETURN
+'
+	Shade3D        (@Shade3D, #CreateWindow, 0, 0, 0, 0, 0, 0)
+	XuiSendMessage ( Shade3D, #SetCallback, Shade3D, &Shade3DCode(), -1, -1, -1, 0)
+	XuiSendMessage ( Shade3D, #Initialize, 0, 0, 0, 0, 0, 0)
+	XuiSendMessage ( Shade3D, #DisplayWindow, 0, 0, 0, 0, 0, 0)
+	XuiSendMessage ( Shade3D, #SetGridProperties, -1, 0, 0, 0, 0, 0)
+END FUNCTION
+'
+'
+' ############################
+' #####  InitWindows ()  #####
+' ############################
+
+FUNCTION  InitWindows ()
+
+'
+	x = 35				'--- XBasic has problems with image grids, so a
+	y = 35				'--- window is displayed in the upper right hand
+	w = 320				'--- corner of the screen to be used as a buffer.
+	h = 200
+
+'--- The below commented method is an alternative solution that uses a displayed
+'--- copygrid as buffer, though this is not the method when designing a polygon
+'--- vector to be displayed.
+'--- However, the below method might be a very cool way to design "transparent"
+'--- windows
+
+'	XgrCreateWindow (@window, 0, x, y, w, h, 0, "")
+'	XgrSetWindowTitle (window, @"Buffer")
+'	XgrCreateGrid (@##bufferGrid, 0, 0, 0, w, h, window, 0, 0)
+'	XgrDisplayWindow (window)
+'	XgrClearGrid (##bufferGrid, $$Black)
+'	XgrHideWindow (window) ' Only uncomment to see what will be copied instead :)
+
+'--- comment out the three lines below and uncomment the above lines to see the
+'--- alternative method.
+
+	XgrGetGridPositionAndSize (##DisplayGrid, @x, @y, @width, @height)
+	XgrGetGridWindow (##DisplayGrid, @window)
+	''Create image grid to buffer
+	XgrCreateGrid ( @##bufferGrid, 1, x, y, width, height, window, 0, 0)
+
+
+XgrFillBox (##bufferGrid, $$Grey, 0, 100, 319, 199)
+XgrFillBox (##DisplayGrid, $$Grey, 0, 100, 319, 199)
+END FUNCTION
+'
+'
+'	########################
+'	#####  Shade3D ()  #####
+'	########################
+'
+'	"Anatomy of Grid Functions" in the GuiDesigner Programmer Guide
+'	describes the operation and modification of grid functions in detail.
+'
+'	WindowFromFunction and/or WindowToFunction may not work, or may not generate the desired results if you:
+'		* Modify the kid constant definition improperly.
+'		* Modify the code in the Create subroutine improperly.
+'		* Imbed blank or comment lines in the Create subroutine.
+'		* Remove the GOSUB Resize line in the Create subroutine (comment out is okay).
+'		* Imbed special purpose code in the Create subroutine before the GOSUB Resize line.
+'		* Delete any of the four lines that assign values to designX, designY, designWidth, designHeight.
+'
+FUNCTION  Shade3D (grid, message, v0, v1, v2, v3, r0, (r1, r1$, r1[], r1$[]))
+	STATIC  designX,  designY,  designWidth,  designHeight
+	STATIC  SUBADDR  sub[]
+	STATIC  upperMessage
+	STATIC  Shade3D
+'
+	$Shade3D      =   0  ' kid   0 grid type = Shade3D
+	$LblBoarder   =   1  ' kid   1 grid type = XuiLabel
+	$LblDisplay   =   2  ' kid   2 grid type = XuiLabel
+	$BtnUP        =   3  ' kid   3 grid type = XuiPushButton
+	$BtnLEFT      =   4  ' kid   4 grid type = XuiPushButton
+	$BtnSTOP      =   5  ' kid   5 grid type = XuiPushButton
+	$BtnRIGHT     =   6  ' kid   6 grid type = XuiPushButton
+	$BtnDOWN      =   7  ' kid   7 grid type = XuiPushButton
+	$BtnZOOMIN    =   8  ' kid   8 grid type = XuiPushButton
+	$BtnZOOMOUT   =   9  ' kid   9 grid type = XuiPushButton
+	$BtnPANLEFT   =  10  ' kid  10 grid type = XuiPushButton
+	$BtnPANRIGHT  =  11  ' kid  11 grid type = XuiPushButton
+	$UpperKid     =  11  ' kid maximum
+'
+'
+	IFZ sub[] THEN GOSUB Initialize
+'	XuiReportMessage (grid, message, v0, v1, v2, v3, r0, r1)
+	IF XuiProcessMessage (grid, message, @v0, @v1, @v2, @v3, @r0, @r1, Shade3D) THEN RETURN
+	IF (message <= upperMessage) THEN GOSUB @sub[message]
+	RETURN
+'
+'
+' *****  Callback  *****  message = Callback : r1 = original message
+'
+SUB Callback
+	message = r1
+	callback = message
+	IF (message <= upperMessage) THEN GOSUB @sub[message]
+END SUB
+'
+'
+' *****  Create  *****  v0123 = xywh : r0 = window : r1 = parent
+'
+SUB Create
+	IF (v0 <= 0) THEN v0 = 0
+	IF (v1 <= 0) THEN v1 = 0
+	IF (v2 <= 0) THEN v2 = designWidth
+	IF (v3 <= 0) THEN v3 = designHeight
+	XuiCreateGrid  (@grid, Shade3D, @v0, @v1, @v2, @v3, r0, r1, &Shade3D())
+	XuiSendMessage ( grid, #SetGridName, 0, 0, 0, 0, 0, @"Shade3D")
+	XuiLabel       (@g, #Create, 0, 0, 140, 200, r0, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LblBoarder")
+	XuiLabel       (@g, #Create, 140, 0, 320, 200, r0, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"LblDisplay")
+	XuiSendMessage ( g, #SetColor, $$Black, $$Black, $$Black, $$White, 0, 0)
+	XuiSendMessage ( g, #SetBorder, $$BorderNone, $$BorderNone, $$BorderNone, 0, 0, 0)
+	##DisplayGrid = g
+	XuiPushButton  (@g, #Create, 52, 8, 32, 32, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnUP, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnUP")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 440, 400, 0, 0, 0, @"Webdings")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"5")
+	XuiPushButton  (@g, #Create, 20, 40, 32, 32, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnLEFT, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnLEFT")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 440, 400, 0, 0, 0, @"Webdings")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"3")
+	XuiPushButton  (@g, #Create, 52, 40, 32, 32, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnSTOP, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnSTOP")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 440, 400, 0, 0, 0, @"Webdings")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"<")
+	XuiPushButton  (@g, #Create, 84, 40, 32, 32, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnRIGHT, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnRIGHT")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 440, 400, 0, 0, 0, @"Webdings")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"4")
+	XuiPushButton  (@g, #Create, 52, 72, 32, 28, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnDOWN, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnDOWN")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 440, 400, 0, 0, 0, @"Webdings")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"6")
+	XuiPushButton  (@g, #Create, 8, 108, 36, 32, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnZOOMIN, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnZOOMIN")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 520, 400, 0, 0, 0, @"Arial")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"+")
+	XuiPushButton  (@g, #Create, 8, 140, 36, 32, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnZOOMOUT, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnZOOMOUT")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 520, 400, 0, 0, 0, @"Arial")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"-")
+	XuiPushButton  (@g, #Create, 52, 124, 36, 32, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnPANLEFT, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnPANLEFT")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 520, 400, 0, 0, 0, @"Arial")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @"<")
+	XuiPushButton  (@g, #Create, 88, 124, 36, 32, r0, grid)
+	XuiSendMessage ( g, #SetCallback, grid, &Shade3D(), -1, -1, $BtnPANRIGHT, grid)
+	XuiSendMessage ( g, #SetGridName, 0, 0, 0, 0, 0, @"BtnPANRIGHT")
+	XuiSendMessage ( g, #SetTexture, $$TextureNone, 0, 0, 0, 0, 0)
+	XuiSendMessage ( g, #SetFont, 520, 400, 0, 0, 0, @"Arial")
+	XuiSendMessage ( g, #SetTextString, 0, 0, 0, 0, 0, @">")
+	GOSUB Resize
+END SUB
+'
+'
+' *****  CreateWindow  *****  v0123 = xywh : r0 = windowType : r1$ = display$
+'
+SUB CreateWindow
+	IF (v0 == 0) THEN v0 = designX
+	IF (v1 == 0) THEN v1 = designY
+	IF (v2 <= 0) THEN v2 = designWidth
+	IF (v3 <= 0) THEN v3 = designHeight
+	XuiWindow (@window, #WindowCreate, v0, v1, v2, v3, r0, @r1$)
+	v0 = 0 : v1 = 0 : r0 = window : ATTACH r1$ TO display$
+	GOSUB Create
+	r1 = 0 : ATTACH display$ TO r1$
+	XuiWindow (window, #WindowRegister, grid, -1, v2, v3, @r0, @"Shade3D")
+END SUB
+'
+'
+' *****  GetSmallestSize  *****  see "Anatomy of Grid Functions"
+'
+SUB GetSmallestSize
+END SUB
+'
+'
+' *****  Redrawn  *****  see "Anatomy of Grid Functions"
+'
+SUB Redrawn
+	XuiCallback (grid, #Redrawn, v0, v1, v2, v3, r0, r1)
+END SUB
+'
+'
+' *****  Resize  *****  see "Anatomy of Grid Functions"
+'
+SUB Resize
+END SUB
+'
+'
+' *****  Selection  *****  see "Anatomy of Grid Functions"
+'
+SUB Selection
+END SUB
+'
+'
+' *****  Initialize  *****  see "Anatomy of Grid Functions"
+'
+SUB Initialize
+	XuiGetDefaultMessageFuncArray (@func[])
+	XgrMessageNameToNumber (@"LastMessage", @upperMessage)
+'
+	func[#Callback]           = &XuiCallback ()               ' disable to handle Callback messages internally
+' func[#GetSmallestSize]    = 0                             ' enable to add internal GetSmallestSize routine
+' func[#Resize]             = 0                             ' enable to add internal Resize routine
+'
+	DIM sub[upperMessage]
+'	sub[#Callback]            = SUBADDRESS (Callback)         ' enable to handle Callback messages internally
+	sub[#Create]              = SUBADDRESS (Create)           ' must be subroutine in this function
+	sub[#CreateWindow]        = SUBADDRESS (CreateWindow)     ' must be subroutine in this function
+'	sub[#GetSmallestSize]     = SUBADDRESS (GetSmallestSize)  ' enable to add internal GetSmallestSize routine
+	sub[#Redrawn]             = SUBADDRESS (Redrawn)          ' generate #Redrawn callback if appropriate
+'	sub[#Resize]              = SUBADDRESS (Resize)           ' enable to add internal Resize routine
+	sub[#Selection]           = SUBADDRESS (Selection)        ' routes Selection callbacks to subroutine
+'
+	IF sub[0] THEN PRINT "Shade3D() : Initialize : error ::: (undefined message)"
+	IF func[0] THEN PRINT "Shade3D() : Initialize : error ::: (undefined message)"
+	XuiRegisterGridType (@Shade3D, "Shade3D", &Shade3D(), @func[], @sub[])
+'
+' Don't remove the following 4 lines, or WindowFromFunction/WindowToFunction will not work
+'
+	designX = 364
+	designY = 362
+	designWidth = 460
+	designHeight = 200
+'
+	gridType = Shade3D
+	XuiSetGridTypeProperty (gridType, @"x",                designX)
+	XuiSetGridTypeProperty (gridType, @"y",                designY)
+	XuiSetGridTypeProperty (gridType, @"width",            designWidth)
+	XuiSetGridTypeProperty (gridType, @"height",           designHeight)
+	XuiSetGridTypeProperty (gridType, @"maxWidth",         designWidth)
+	XuiSetGridTypeProperty (gridType, @"maxHeight",        designHeight)
+	XuiSetGridTypeProperty (gridType, @"minWidth",         designWidth)
+	XuiSetGridTypeProperty (gridType, @"minHeight",        designHeight)
+	XuiSetGridTypeProperty (gridType, @"can",              $$Focus OR $$Respond OR $$Callback)
+	XuiSetGridTypeProperty (gridType, @"focusKid",         $BtnUP)
+	IFZ message THEN RETURN
+END SUB
+END FUNCTION
+'
+'
+' ############################
+' #####  Shade3DCode ()  #####
+' ############################
+'
+' You can stop GuiDesigner from putting the following comment
+' lines in callback functions by removing the comment lines in
+' the code.xxx file in your \xb\xxx directory.
+'
+' This is a callback function that supports the grid function
+' of the same name less the last 4 letters (Shade3DCode).
+'
+' When an important event occurs in the grid function created
+' from your design window, is sends a callback message to this
+' function, with the original message in r1.
+'
+' Most callback functions process only Selection messages
+' because usually that's enough to perform their function.
+'
+' When keystrokes are entered into a TextLine or TextArea grid,
+' this callback function receives a TextEvent callback message.
+' This function can prevent Keystrokes from inserting characters
+' in the TextLine or TextArea grid by returning a -1 in kid.
+'
+' The first time GuiDesigner generates this function, it puts
+' a "SUB Selection" subroutine at the bottom of the function.
+' It contains a SELECT CASE block with kid constants named the
+' same as the grids you put in the design window.  For grids
+' you didn't give a name (with the AppearanceWindow), a not
+' very useful default name is substituted, so be sure to enter
+' good GridNames in the Appearance window for every grid in
+' your design windows.  If you change the GridNames later, the
+' names in the SELECT CASE block are NOT updated, and you'll
+' get "Undefined Constant" errors on lines with obsolete constant
+' names when you recompile the program.  Then you'll have to
+' update the names in the SELECT CASE block by hand.
+'
+' It's easy to find out what your code has to respond to...
+' just run your program!  When you operate the grids in the
+' window, the XuiReportMessage() call in this function prints
+' the entry arguments in a ReportMessage window.  You can
+' comment out this lines to disable this feature, but don't
+' remove them entirely - it might come in handy later.
+'
+'
+FUNCTION  Shade3DCode (grid, message, v0, v1, v2, v3, kid, r1)
+SHARED D1, D2, D3, DZ, ox, oy, oz, R1, R2, R3
+	$Shade3D      =   0  ' kid   0 grid type = Shade3D
+	$LblBoarder   =   1  ' kid   1 grid type = XuiLabel
+	$LblDisplay   =   2  ' kid   2 grid type = XuiLabel
+	$BtnUP        =   3  ' kid   3 grid type = XuiPushButton
+	$BtnLEFT      =   4  ' kid   4 grid type = XuiPushButton
+	$BtnSTOP      =   5  ' kid   5 grid type = XuiPushButton
+	$BtnRIGHT     =   6  ' kid   6 grid type = XuiPushButton
+	$BtnDOWN      =   7  ' kid   7 grid type = XuiPushButton
+	$BtnZOOMIN    =   8  ' kid   8 grid type = XuiPushButton
+	$BtnZOOMOUT   =   9  ' kid   9 grid type = XuiPushButton
+	$BtnPANLEFT   =  10  ' kid  10 grid type = XuiPushButton
+	$BtnPANRIGHT  =  11  ' kid  11 grid type = XuiPushButton
+	$UpperKid     =  11  ' kid maximum
+'
+'
+'	XuiReportMessage (grid, message, v0, v1, v2, v3, kid, r1)
+	IF (message = #Callback) THEN message = r1
+'
+	SELECT CASE message
+		CASE #Selection		: GOSUB Selection   ' Common callback message
+'		CASE #TextEvent		: GOSUB TextEvent   ' KeyDown in TextArea or TextLine
+		CASE #CloseWindow	:	QUIT(0)
+	END SELECT
+	RETURN
+'
+'
+' *****  Selection  *****
+'
+SUB Selection
+	SELECT CASE kid
+		CASE $Shade3D      :
+		CASE $LblBoarder   :
+		CASE $LblDisplay   :
+		CASE $BtnUP        : INC D3
+		CASE $BtnLEFT      : DEC D1
+		CASE $BtnSTOP      :
+			R1 = 0: R2 = 0: R3 = 0
+			ox = 0: oy = -50: oz = 1100
+			D1 = 0 : D2 = 0 : D3 = 0
+		CASE $BtnRIGHT     : INC D1
+		CASE $BtnDOWN      : DEC D3
+		CASE $BtnZOOMIN    : DZ = DZ - 2
+		CASE $BtnZOOMOUT   : DZ = DZ + 2
+		CASE $BtnPANLEFT   : INC D2
+		CASE $BtnPANRIGHT  : DEC D2
+	END SELECT
+END SUB
+END FUNCTION
+'
+'
+' ############################
+' #####  FindNormals ()  #####
+' ############################
+'
+FUNCTION  FindNormals ()
+
+'This routine initializes the data required by the fast Lambert shading
+'algorithm. It calculates the point which is both perpendicular
+'and a constant distance from each polygon and stores it. This point
+'is then rotated with the rest of the points. When it comes time for
+'shading, the normal to the polygon is looked up in a simple lookup
+'table for maximum speed.
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+FOR a = 0 TO MaxPolys
+	P1 = Polys[a].P1
+	P2 = Polys[a].P2
+	P3 = Polys[a].P3
+
+	'find the vectors of 2 lines inside the polygon
+  ax! = Points[P2].XObject - Points[P1].XObject
+  ay! = Points[P2].YObject - Points[P1].YObject
+  az! = Points[P2].ZObject - Points[P1].ZObject
+
+  bx! = Points[P3].XObject - Points[P2].XObject
+  by! = Points[P3].YObject - Points[P2].YObject
+  bz! = Points[P3].ZObject - Points[P2].ZObject
+
+  'find the cross product of the 2 vectors
+  nx! = ay! * bz! - az! * by!
+  ny! = az! * bx! - ax! * bz!
+  nz! = ax! * by! - ay! * bx!
+
+  'normalize the vector so it ranges from -1 to 1
+  M! = SQRT(nx! * nx! + ny! * ny! + nz! * nz!)
+  IF M! <> 0 THEN nx! = nx! / M!: ny! = ny! / M!: nz! = nz! / M!
+  'store the vector for later rotation(notice that it is scaled
+  'up by 128 so it can be stored as an integer variable)
+  Polys[a].WorldXN = nx! * 128 + Points[P1].XObject
+  Polys[a].WorldYN = ny! * 128 + Points[P1].YObject
+  Polys[a].WorldZN = nz! * 128 + Points[P1].ZObject
+
+NEXT
+
+END FUNCTION
+'
+'
+' #############################
+' #####  CullPolygons ()  #####
+' #############################
+'
+FUNCTION  CullPolygons ()
+'"Culls" the polygons which aren't visible to the viewer. Also shades
+'each polygon using Lambert's law.
+    'This algorithm for removing hidden faces was developed by Dave Cooper.
+    'There is another method, by finding the dot product of the
+    'plane's normal and the viewing vector, but this algorithm is
+    'much faster because of its simplicity(and lack of floating point
+    'calculations).
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+    FOR a = 0 TO MaxPolys
+        P1 = Polys[a].P1
+        P2 = Polys[a].P2
+        P3 = Polys[a].P3
+
+        IF Points[P1].YView <= Points[P2].YView THEN
+            IF Points[P3].YView < Points[P1].YView THEN
+                PTop = P3
+                PNext = P1
+                PLast = P2
+            ELSE
+                PTop = P1
+                PNext = P2
+                PLast = P3
+            END IF
+        ELSE
+            IF Points[P3].YView < Points[P2].YView THEN
+                PTop = P3
+                PNext = P1
+                PLast = P2
+            ELSE
+                PTop = P2
+                PNext = P3
+                PLast = P1
+            END IF
+        END IF
+
+        XLow = Points[PTop].XView
+        YLow = Points[PTop].YView
+
+        XNext = Points[PNext].XView
+        XLast = Points[PLast].XView
+
+        IF XNext <= XLow AND XLast >= XLow THEN
+            Polys[a].Culled = True
+        ELSE
+					IF XNext >= XLow AND XLast <= XLow THEN
+            Polys[a].Culled = False
+        	ELSE
+            YNext = Points[PNext].YView
+            YLast = Points[PLast].YView
+            IF ((YNext - YLow) * 256&) \ (XNext - XLow) < ((YLast - YLow) * 256&) \ (XLast - XLow) THEN
+                Polys[a].Culled = False
+            ELSE
+                Polys[a].Culled = True
+            END IF
+					END IF
+				END IF
+
+
+	NEXT
+
+END FUNCTION
+'
+'
+' #########################
+' #####  DrawLine ()  #####
+' #########################
+'
+FUNCTION  DrawLine (xs, ys, xe, ye)
+
+'Enters a line into the edge list. For each scan line, the line's
+'X coordinate is found. Notice the lack of floating point math in this
+'subroutine.
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+    IF ys > ye THEN SWAP xs, xe: SWAP ys, ye
+
+    IF ye < 0 OR ys > 199 THEN RETURN(0)
+
+    IF ys < 0 THEN
+        xs = xs + ((xe - xs) * -ys) \ (ye - ys)
+        ys = 0
+
+    END IF
+
+    xd = xe - xs
+    yd = ye - ys
+
+    IF yd <> 0 THEN xi = xd \ yd: xrs = ABS(xd MOD yd)
+
+    xr = -yd \ 2
+
+    IF ye > 199 THEN ye = 199
+
+    xdirect = SGN(xd) + xi
+
+    FOR Y = ys TO ye
+        IF xs < EdgeList[Y].Low THEN EdgeList[Y].Low = xs
+        IF xs > EdgeList[Y].High THEN EdgeList[Y].High = xs
+
+        xr = xr + xrs
+        IF xr > 0 THEN
+            xr = xr - yd
+            xs = xs + xdirect
+        ELSE
+            xs = xs + xi
+        END IF
+    NEXT
+
+END FUNCTION
+'
+'
+' ###########################
+' #####  DrawObject ()  #####
+' ###########################
+'
+FUNCTION  DrawObject ()
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+		'Find the center of each visible polygon, and prepare the order list.
+    NumPolys = 0
+    FOR a = 0 TO MaxPolys
+        IF Polys[a].Culled = False THEN 'is this polygon visible?
+            Polys[NumPolys].ZOrder = a
+            NumPolys = NumPolys + 1
+            Polys[a].ZCenter = Points[Polys[a].P1].ZWorld + Points[Polys[a].P2].ZWorld + Points[Polys[a].P3].ZWorld
+        END IF
+    NEXT
+    'Sort the visible polygons by their Z center using a shell sort.
+    NumPolys = NumPolys - 1
+    Mid = (NumPolys + 1) \ 2
+    DO
+        FOR a = 0 TO NumPolys - Mid
+            CompareLow = a
+            CompareHigh = a + Mid
+            DO WHILE Polys[Polys[CompareLow].ZOrder].ZCenter < Polys[Polys[CompareHigh].ZOrder].ZCenter
+                SWAP Polys[CompareLow].ZOrder, Polys[CompareHigh].ZOrder
+                CompareHigh = CompareLow
+                CompareLow = CompareLow - Mid
+                IF CompareLow < 0 THEN EXIT DO
+            LOOP
+        NEXT
+        Mid = Mid \ 2
+    LOOP WHILE Mid > 0
+    'Plot the visible polygons.
+    FOR Z = 0 TO NumPolys
+        a = Polys[Z].ZOrder 'which polygon do we plot?
+        P1 = Polys[a].P1: P2 = Polys[a].P2: P3 = Polys[a].P3
+        PolyFill ((Points[P1].XView), (Points[P1].YView), (Points[P2].XView), (Points[P2].YView), (Points[P3].XView), (Points[P3].YView), (Polys[a].Intensity))
+    NEXT
+
+END FUNCTION
+'
+'
+' ############################
+' #####  DrawShadows ()  #####
+' ############################
+'
+FUNCTION  DrawShadows ()
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+    YLow = 32767: YHigh = -32768
+    XLow = 32767: XHigh = -32768
+    FOR a = 0 TO MaxPoints
+        'Project the 3-D point onto the ground plane...
+        temp& = (Points[a].YWorld - 200)
+        X = Points[a].XWorld - (temp& * lx) \ ly
+        Y = 200 'ground plane has a constant Y coordinate
+        Z = Points[a].ZWorld - (temp& * lz) \ ly
+        'Put the point into perspective
+        xTemp = 160 + (X * 400&) \ Z
+        yTemp = 100 + (Y * 300&) \ Z
+
+        Points[a].XShadow = xTemp
+        Points[a].YShadow = yTemp
+
+        'Find the lowest & highest X Y coordinates
+        IF yTemp < YLow THEN YLow = yTemp
+
+        IF yTemp > YHigh THEN YHigh = yTemp
+        IF xTemp < XLow THEN XLow = xTemp
+        IF xTemp > XHigh THEN XHigh = xTemp
+    NEXT
+
+    'Store lowest & highest coordinates for later erasing...
+    ShadowXLow[s] = XLow: ShadowYLow[s] = YLow
+
+    ShadowXHigh[s] = XHigh: ShadowYHigh[s] = YHigh
+    IF XHigh < 0 OR XLow > 319 OR YLow > 199 OR YHigh < 0 THEN RETURN(0)
+    IF YHigh > 199 THEN YHigh = 199
+    IF YLow < 0 THEN YLow = 0
+
+    'Initialize the edge list
+    FOR a = YLow TO YHigh
+        EdgeList[a].Low = 32767
+        EdgeList[a].High = -32768
+    NEXT
+
+    'Enter the lines into the edge list
+    FOR a = 0 TO MaxLines
+        P1 = lines[a].P1
+        P2 = lines[a].P2
+        DrawLine ((Points[P1].XShadow), (Points[P1].YShadow), (Points[P2].XShadow), (Points[P2].YShadow))
+        'LINE ((Points(P1).XShadow),(Points(P1).YShadow))-((Points(P2).XShadow), (Points(P2).YShadow)), 0
+    NEXT
+
+    'Fill the polygon
+    EdgeFill (YLow, YHigh, 0)
+END FUNCTION
+'
+'
+' #########################
+' #####  EdgeFill ()  #####
+' #########################
+'
+FUNCTION  EdgeFill (YLow, YHigh, C)
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+g= C * 16: b = C * 16
+D = 65536 * b + 256 * g
+		FOR a = YLow TO YHigh
+        XgrDrawLine (##bufferGrid, D, EdgeList[a].Low, a, EdgeList[a].High, a)
+    NEXT
+
+END FUNCTION
+'
+'
+' #########################
+' #####  PolyFill ()  #####
+' #########################
+'
+FUNCTION  PolyFill (x1, y1, x2, y2, x3, y3, C)
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+    'find lowest and high X & Y coordinates
+    IF y1 < y2 THEN YLow = y1 ELSE YLow = y2
+    IF y3 < YLow THEN YLow = y3
+    IF y1 > y2 THEN YHigh = y1 ELSE YHigh = y2
+    IF y3 > YHigh THEN YHigh = y3
+
+    IF x1 < x2 THEN XLow = x1 ELSE XLow = x2
+    IF x3 < XLow THEN XLow = x3
+    IF x1 > x2 THEN XHigh = x1 ELSE XHigh = x2
+    IF x3 > XHigh THEN XHigh = x3
+
+    IF YLow < 0 THEN YLow = 0
+    IF YHigh > 199 THEN YHigh = 199
+
+    IF XLow < XLow[s] THEN XLow[s] = XLow
+    IF XHigh > XHigh[s] THEN XHigh[s] = XHigh
+
+    IF YLow < YLow[s] THEN YLow[s] = YLow
+    IF YHigh > YHigh[s] THEN YHigh[s] = YHigh
+
+
+    'check for polygons which cannot be visible
+
+    'initialize the edge list
+    FOR a = YLow TO YHigh
+        EdgeList[a].Low = 32767
+        EdgeList[a].High = -32768
+    NEXT
+
+    'Remember the lowest & highest X and Y coordinates drawn to the
+    'screen for later erasing
+
+    'Find the start and stop X coodinates for each scan line
+    DrawLine ((x1), (y1), (x2), (y2))
+    DrawLine ((x2), (y2), (x3), (y3))
+    DrawLine ((x3), (y3), (x1), (y1))
+    EdgeFill (YLow, YHigh, C)
+
+END FUNCTION
+'
+'
+' #############################
+' #####  RotatePoints ()  #####
+' #############################
+'
+FUNCTION  RotatePoints ()
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+
+    'lookup the sine and cosine of each angle...
+    s1& = SineTable[R1]: c1& = SineTable[R1 + 90]
+    s2& = SineTable[R2]: c2& = SineTable[R2 + 90]
+    s3& = SineTable[R3]: c3& = SineTable[R3 + 90]
+
+    'rotate the points of the object
+		z3 = 1
+    FOR a = 0 TO MaxPoints
+        xo = Points[a].XObject
+        yo = Points[a].YObject
+        zo = Points[a].ZObject
+        GOSUB Rotate3D
+
+        Points[a].XView = 160 + (x2 * 400&) \ z3
+        Points[a].YView = 100 + (y3 * 300&) \ z3
+        'IF y3 > 300 THEN STOP
+
+        Points[a].XWorld = x2
+        Points[a].YWorld = y3
+        Points[a].ZWorld = z3
+    NEXT
+    'rotate the normals of each polygon...
+    FOR a = 0 TO MaxPolys
+        xo = Polys[a].WorldXN
+        yo = Polys[a].WorldYN
+        zo = Polys[a].WorldZN
+        GOSUB Rotate3D
+        P1 = Polys[a].P1
+        'unorigin the point
+        x2 = x2 - Points[P1].XWorld
+        y3 = y3 - Points[P1].YWorld
+        z3 = z3 - Points[P1].ZWorld
+        'check the bounds just in case of a round off error
+        IF x2 < -128 THEN
+						x2 = -128
+					 ELSE
+						IF x2 > 128 THEN x2 = 128
+					 END IF
+        IF y3 < -128 THEN
+						y3 = -128
+					 ELSE
+						IF y3 > 128 THEN y3 = 128
+					 END IF
+        IF z3 < -128 THEN
+						z3 = -128
+					 ELSE
+						IF z3 > 128 THEN z3 = 128
+					 END IF
+        'store the normal back; it's now ready for the shading
+        'calculations (which are simplistic now)
+        Polys[a].NormalX = x2 + 128
+        Polys[a].NormalY = y3 + 128
+        Polys[a].NormalZ = z3 + 128
+    NEXT
+    RETURN(0)
+
+SUB Rotate3D
+    x1 = (xo * c1& - zo * s1&) \ 1024 'yaw
+    z1 = (xo * s1& + zo * c1&) \ 1024
+
+    z3 = (z1 * c3& - yo * s3&) \ 1024 + oz 'pitch
+    y2 = (z1 * s3& + yo * c3&) \ 1024
+
+    x2 = (x1 * c2& + y2 * s2&) \ 1024 + ox 'roll
+    y3 = (y2 * c2& - x1 * s2&) \ 1024 + oy
+
+END SUB
+
+END FUNCTION
+'
+'
+' ##############################
+' #####  ShadePolygons ()  #####
+' ##############################
+'
+FUNCTION  ShadePolygons ()
+
+' ***** SHARED VARIABLES *****
+SHARED EdgeList[]
+SHARED SineTable[]	'cos(x)=sin(x+90)
+SHARED R1, R2, R3, ox, oy, oz
+SHARED MaxPoints, MaxPolys, MaxLines
+
+SHARED lines[]
+SHARED Polys[]
+SHARED Points[]
+SHARED lx[], ly[], lz[]	'lookup tables for Lambert shading
+
+SHARED s, XLow[], XHigh[], YLow[], YHigh[]
+SHARED ShadowXLow[], ShadowXHigh[], ShadowYLow[], ShadowYHigh[]
+SHARED lx, ly, lz
+
+	'EdgeType	EdgeList[]
+	'LineType	lines[]
+	'PolyType	Polys[]
+	'PointType	Points[]
+
+	FOR a = 0 TO MaxPolys
+        IF Polys[a].Culled = False THEN
+
+         'lookup the polygon's normal for shading
+         '(128*128)\15 = 1092
+         Intensity = (lx[Polys[a].NormalX] + ly[Polys[a].NormalY] + lz[Polys[a].NormalZ]) \ 1092
+         IF Intensity < 0 THEN Intensity = 0
+         Intensity = Intensity + 5
+         IF Intensity > 15 THEN Intensity = 15
+
+         Polys[a].Intensity = Intensity
+        END IF
+    NEXT
+END FUNCTION
+END PROGRAM
+„
